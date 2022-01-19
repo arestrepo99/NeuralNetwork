@@ -1,0 +1,6 @@
+/.DS_Store
+/.ipynb_checkpoints
+/.vscode
+/Backups
+/__pycache__
+/mnist.pkl
