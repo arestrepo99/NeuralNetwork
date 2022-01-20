@@ -150,10 +150,10 @@ class Conv(Layer):
             self.computeError(kwargs['Y'], kwargs['e'])
             self.computedb(kwargs['e'])
             self.computeGradients(self.ym1, kwargs['e'])
-        #if 'sigma' in kwargs:
-        #    self.computedb(kwargs['sigma'])
-        #    self.computeGradients(self.ym1, kwargs['sigma'])
-        #self.computeLocalGradient()
+        if 'sigma' in kwargs:
+            self.computedb(kwargs['sigma'])
+            self.computeGradients(self.ym1, kwargs['sigma'])
+        self.computeLocalGradient()
         #self.learningRule(np.float32(kwargs['lrate']))
         return self.sigma
 

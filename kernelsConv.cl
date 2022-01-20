@@ -142,8 +142,9 @@ kernel void computeLocalGradient(const uint outSize1,
                             const uint inSize3,
                             const uint kernel1,
                             const uint kernel2,
-                            global float *sigma,
-                            global float *db,
+                            global float *sigmaIn,
+                            global float *sigmaOut,
+                            global float *dphi,
                             global float *w){
                                 
     uint batch = get_global_id(0)/filters;
@@ -151,10 +152,19 @@ kernel void computeLocalGradient(const uint outSize1,
     uint in2 = get_global_id(1)%inSize2;
     uint dim = get_global_id(2);
 
-    uint indIn = batch*      inSize1*inSize2*inSize3+
-            in1 *       inSize2*inSize3+
-            in2 *       inSize3+
-            dim;
+    uint wind = batch        *filters*kernel1*kernel2*inSize3 +
+                 filter       *kernel1*kernel2*inSize3 +
+                 k1          *kernel2*inSize3 +
+                 k2          *inSize3 + 
+                 dim;
+
+    uint indIn = batch               *inSize3*inSize2*inSize1 + 
+                 k1                  *inSize3*inSize2 + 
+                 k2                  *inSize3+
+                 dim;  
+
+    uint indOut = batch       *filters*outSize2*outSize1 + 
+                 filter      ;
 
     uint kernelBegin1 = max((uint) 0,in1-kernel1);
     uint kernelStop1 = min(in1,kernel1)+1;
@@ -166,7 +176,7 @@ kernel void computeLocalGradient(const uint outSize1,
     for(uint k1 = kernelBegin1; k1<kernelStop1; k1++){
         for(uint k2 = kernelBegin2; k2<kernelStop2; k2++){
             for(uint filter = 0; filter<filters; filter++){
-                sigma[indIn] += 
+                sigmaIn[indIn] += 
                     w[filter*kernel1*kernel2*inSize3 +
                         k1*kernel2*inSize3 + 
                         k2 * inSize3 + 
