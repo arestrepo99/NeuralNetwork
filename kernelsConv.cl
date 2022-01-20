@@ -133,8 +133,9 @@ kernel void computeGradients(global float * ym1,
         }
     } 
 }
-/* 
-kernel void computeLocalGradient(const uint outSize1,
+
+kernel void computeLocalGradient(global float *sigmaOut,
+                            const uint outSize1,
                             const uint outSize2,
                             const uint filters,
                             const uint inSize1,
@@ -142,8 +143,9 @@ kernel void computeLocalGradient(const uint outSize1,
                             const uint inSize3,
                             const uint kernel1,
                             const uint kernel2,
+                            const uint stride1,
+                            const uint stride2,
                             global float *sigmaIn,
-                            global float *sigmaOut,
                             global float *dphi,
                             global float *w){
                                 
@@ -152,35 +154,36 @@ kernel void computeLocalGradient(const uint outSize1,
     uint in2 = get_global_id(1)%inSize2;
     uint dim = get_global_id(2);
 
-    uint wind = batch        *filters*kernel1*kernel2*inSize3 +
-                 filter       *kernel1*kernel2*inSize3 +
-                 k1          *kernel2*inSize3 +
-                 k2          *inSize3 + 
-                 dim;
+    uint wind;
 
     uint indIn = batch               *inSize3*inSize2*inSize1 + 
                  in1                  *inSize3*inSize2 + 
                  in2                  *inSize3+
                  dim;  
 
-    uint indOut = batch       *filters*outSize2*outSize1 + 
-                 filter      ;
+    uint indOut = batch         *filters*outSize2*outSize1 + 
+                 in1/stride1    *filters*outSize2 + 
+                 in2/stride2    *inSize3;
 
     uint kernelBegin1 = max((uint) 0,in1-kernel1);
     uint kernelStop1 = min(in1,kernel1)+1;
-
     uint kernelBegin2 = max((uint) 0,in2-kernel2);
-    uint kernelStop2 = min(in2,kernel2)+1 ;
+    uint kernelStop2 = min(in2,kernel2)+1;
 
-    sigma[indIn] = 0;
+    sigmaIn[indIn] = 0;
     for(uint k1 = kernelBegin1; k1<kernelStop1; k1++){
         for(uint k2 = kernelBegin2; k2<kernelStop2; k2++){
             for(uint filter = 0; filter<filters; filter++){
+                wind =  filter      *kernel1*kernel2*inSize3 +
+                 k1          *kernel2*inSize3 +
+                 k2          *inSize3 + 
+                 dim;
+
                 sigmaIn[indIn] += 
-                    w[]
-                    *db[batch*filters + filter];
+                    w[wind]
+                    *sigmaOut[indOut+filter]*dphi[indOut+filter];
             }
         }
     }
 }
- */
+ 

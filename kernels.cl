@@ -112,26 +112,20 @@ kernel void learningRule(const float lrate,
 }
 
 kernel void squareError(global float *e,
-                        global float *e2,
-                        const uint outSize){
-
-    uint batch = get_global_id(0);
-    uint j = get_global_id(1);
-
-    e2[batch*outSize + j] = pow(e[batch*outSize + j],2);
-    }
-
-kernel void meanError(const int outSize,
-                const int batchSize,
-                global float *e2,
-                global float *E){
+                        global float *e2){
 
     uint ind = get_global_id(0);
+    e2[ind] = pow(e[ind],2);
+    }
+
+kernel void meanError(const int batchSize,
+                const int outSize,
+                global float *e2,
+                global float *E){
+    uint ind = get_global_id(0);
     E[ind] = 0;            
-    for(int j=0; j<outSize; j++){
-        for(int batch=0; batch<batchSize; batch++){
-            E[ind] += e2[batch*outSize + j];
-        }
+    for(int batch=0; batch<batchSize; batch++){
+        E[ind] += e2[batch*outSize + ind];
     }
     E[ind] = E[ind]/batchSize;
 }

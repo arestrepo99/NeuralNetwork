@@ -5,47 +5,47 @@ from Kernel import Kernel
 from settings import program
 
 class Dense:
-    def __init__(self, inputShape, outputShape, activation):
-        self.inputShape = np.int32(inputShape)
-        self.outputShape = np.int32(outputShape)
+    def __init__(self, inputSize, outputSize, activation):
+        self.inputShape = (np.int32(inputSize),)
+        self.outputShape = (np.int32(outputSize),)
         self.activation = activation
 
-        self.w = Tensor(np.random.randn(inputShape,outputShape))
-        self.b = Tensor(np.random.randn(outputShape))
+        self.w = Tensor(np.random.randn(inputSize,outputSize))
+        self.b = Tensor(np.random.randn(outputSize))
         
     def allocateMemory(self, batchSize):
-        outputShape = self.outputShape
-        inputShape = self.inputShape
+        outputSize, = self.outputShape
+        inputSize, = self.inputShape
         batchSize = np.int32(batchSize)
         self.batchSize = batchSize
-        self.v = Tensor((batchSize,outputShape))
-        self.y = Tensor((batchSize,outputShape))
-        self.dphi = Tensor((batchSize,outputShape))
-        self.sigma = Tensor((batchSize,inputShape))
-        self.dw = Tensor((batchSize,inputShape,outputShape))
-        self.db = Tensor((batchSize,outputShape))
+        self.v = Tensor((batchSize,outputSize))
+        self.y = Tensor((batchSize,outputSize))
+        self.dphi = Tensor((batchSize,outputSize))
+        self.sigma = Tensor((batchSize,inputSize))
+        self.dw = Tensor((batchSize,inputSize,outputSize))
+        self.db = Tensor((batchSize,outputSize))
 
         self.GPUForwardPropagate = Kernel(program.forwardPropagate,
-            (batchSize,outputShape),
-            (inputShape, outputShape, self.v, self.w, self.b))
+            (batchSize,outputSize),
+            (inputSize, outputSize, self.v, self.w, self.b))
         self.activate = Kernel(self.activation(program), 
-            (batchSize*outputShape,),
-            (outputShape, self.v, self.y, self.dphi))
+            (batchSize*outputSize,),
+            (outputSize, self.v, self.y, self.dphi))
         self.computeError = Kernel(program.computeError, 
-            (batchSize*outputShape,),
+            (batchSize*outputSize,),
             (self.y, self.dphi, self.db))
         self.computedb = Kernel(program.computedb, 
-            (batchSize*outputShape,),
+            (batchSize*outputSize,),
             (self.dphi, self.db))
         self.computeGradients = Kernel(program.computeGradients, 
-            (batchSize, inputShape, outputShape),
-            (inputShape, outputShape, self.dw, self.db))
+            (batchSize, inputSize, outputSize),
+            (inputSize, outputSize, self.dw, self.db))
         self.computeLocalGradient = Kernel(program.computeLocalGradient, 
-            (batchSize, self.inputShape),
-            (self.inputShape, self.outputShape, self.sigma, self.db, self.dphi, self.w))
+            (batchSize, inputSize),
+            (inputSize, outputSize, self.sigma, self.db, self.dphi, self.w))
         self.learningRule = Kernel(program.learningRule, 
-            (inputShape, outputShape),
-            (inputShape, outputShape, batchSize, self.dw,self.db,self.w,self.b))
+            (inputSize, outputSize),
+            (inputSize, outputSize, batchSize, self.dw,self.db,self.w,self.b))
         
     def forwardPropagate(self, ym1):
         self.ym1 = ym1

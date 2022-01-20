@@ -1,8 +1,9 @@
+# pylande: reportMissingImports=false
 import numpy as np
 import pyopencl as cl
 import time
 
-import settings
+from settings import program
 
 from Tensor import Tensor
 from Kernel import Kernel
@@ -22,16 +23,17 @@ class NeuralNetwork:
     def allocateMemory(self, batchSize):
         self.batchSize = np.int32(batchSize)
         
-        self.e = Tensor((self.batchSize,self.outputShape))
-        self.e2 = Tensor((self.batchSize,self.outputShape))
-        self.E = Tensor((self.outputShape,))
+        self.e = Tensor((self.batchSize,*self.outputShape))
+        self.e2 = Tensor((self.batchSize,*self.outputShape))
+        self.E = Tensor((*self.outputShape,))
 
         [layer.allocateMemory(batchSize) for layer in self.layers]
-        self.squareError = Kernel(program.squareError, (self.batchSize,self.outputShape),
-                        (self.e, self.e2, self.outputShape))
+
+        self.squareError = Kernel(program.squareError, (np.prod((self.batchSize,*self.outputShape)),),
+                        (self.e, self.e2))
+        self.meanError = Kernel(program.meanError, (np.prod(self.outputShape),),
+                        (batchSize, np.prod(self.outputShape), self.e2, self.E))
         
-        self.meanError = Kernel(program.meanError, (self.batchSize,self.outputShape),
-                        (self.outputShape, self.batchSize, self.e2, self.E))
         
     
     def predict(self, x):

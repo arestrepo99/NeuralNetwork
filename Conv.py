@@ -47,7 +47,7 @@ class Conv:
              self.dw,self.dphi))
         self.computeLocalGradient = Kernel(programConv.computeLocalGradient, 
             (batchSize*self.filters, np.prod(self.inputShape[:2]), self.inputShape[2]),
-            (*self.outputShape,*self.inputShape,*self.kernel,
+            (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
             self.sigma, self.db, self.w))
         #self.learningRule = Kernel(programConv.learningRule, 
         #    (1, 1),
@@ -68,7 +68,7 @@ class Conv:
         if 'sigma' in kwargs:
             self.computedb(kwargs['sigma'])
             self.computeGradients(self.ym1, kwargs['sigma'])
-        self.computeLocalGradient()
+        self.computeLocalGradient(kwargs['sigma'])
         #self.learningRule(np.float32(kwargs['lrate']))
         return self.sigma
         
