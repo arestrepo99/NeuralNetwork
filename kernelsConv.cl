@@ -133,7 +133,7 @@ kernel void computeGradients(global float * ym1,
         }
     } 
 }
-
+/* 
 kernel void computeLocalGradient(const uint outSize1,
                             const uint outSize2,
                             const uint filters,
@@ -159,8 +159,8 @@ kernel void computeLocalGradient(const uint outSize1,
                  dim;
 
     uint indIn = batch               *inSize3*inSize2*inSize1 + 
-                 k1                  *inSize3*inSize2 + 
-                 k2                  *inSize3+
+                 in1                  *inSize3*inSize2 + 
+                 in2                  *inSize3+
                  dim;  
 
     uint indOut = batch       *filters*outSize2*outSize1 + 
@@ -177,12 +177,10 @@ kernel void computeLocalGradient(const uint outSize1,
         for(uint k2 = kernelBegin2; k2<kernelStop2; k2++){
             for(uint filter = 0; filter<filters; filter++){
                 sigmaIn[indIn] += 
-                    w[filter*kernel1*kernel2*inSize3 +
-                        k1*kernel2*inSize3 + 
-                        k2 * inSize3 + 
-                        dim]
+                    w[]
                     *db[batch*filters + filter];
             }
         }
     }
 }
+ */
