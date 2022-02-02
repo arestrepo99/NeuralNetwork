@@ -49,7 +49,6 @@ class Dense:
         
     def forwardPropagate(self, ym1):
         self.ym1 = ym1
-        #assert self.ym1.shape[1:] == self.inputShape
         self.GPUForwardPropagate(self.ym1)
         self.activate()
         return self.y
