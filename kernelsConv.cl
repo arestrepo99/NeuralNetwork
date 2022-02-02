@@ -153,9 +153,7 @@ kernel void computeLocalGradient(global float *sigmaOut,
     uint in1 = get_global_id(1)/inSize2;
     uint in2 = get_global_id(1)%inSize2;
     uint dim = get_global_id(2);
-
-    //uint wind = dim;
-
+    
     uint indIn = batch               *inSize3*inSize2*inSize1 + 
                  in1                  *inSize3*inSize2 + 
                  in2                  *inSize3+

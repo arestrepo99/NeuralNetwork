@@ -74,6 +74,7 @@ class NeuralNetwork:
         l = self.getLoss()
         for layer in self.layers:
             dw.append([])
+            db.append([])
             from Dense import Reshape
             if isinstance(layer,Reshape):
                 continue
@@ -86,7 +87,6 @@ class NeuralNetwork:
                 dw[-1].append((self.getLoss()-l)/step)
                 w[i] = w0
                 layer.w.set(w)
-            db.append([])
             b = layer.b.get().flatten()
             for i in range(b.size):
                 b0 = b[i]
