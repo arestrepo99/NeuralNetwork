@@ -1,4 +1,5 @@
 # pylande: reportMissingImports=false
+import enum
 import numpy as np
 import pyopencl as cl
 import time
@@ -14,6 +15,8 @@ class NeuralNetwork:
         self.inputShape = layers[0].inputShape
         self.outputShape = layers[-1].outputShape
         self.loss = []
+        for ind in range(1,len(self.layers)):
+            assert self.layers[ind].inputShape == self.layers[ind-1].outputShape
 
     def getLoss(self,):
             self.squareError()
@@ -28,6 +31,8 @@ class NeuralNetwork:
         self.E = Tensor((*self.outputShape,))
 
         [layer.allocateMemory(batchSize) for layer in self.layers]
+
+
 
         self.squareError = Kernel(program.squareError, (np.prod((self.batchSize,*self.outputShape)),),
                         (self.e, self.e2))

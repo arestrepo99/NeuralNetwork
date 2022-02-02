@@ -63,3 +63,18 @@ class Dense:
         self.learningRule(np.float32(kwargs['lrate']))
         return self.sigma
         
+
+
+class Reshape:
+    def __init__(self, inputShape, outputShape):
+        self.inputShape = inputShape
+        self.outputShape = outputShape
+
+    def allocateMemory(self, batchSize):
+        pass
+
+    def forwardPropagate(self, ym1):
+        return self.ym1
+    
+    def backwardPropagate(self, **kwargs):
+        return kwargs['sigma']
