@@ -74,6 +74,9 @@ class NeuralNetwork:
         l = self.getLoss()
         for layer in self.layers:
             dw.append([])
+            from Dense import Reshape
+            if isinstance(layer,Reshape):
+                continue
             w = layer.w.get().flatten()
             for i in range(w.size):
                 w0 = w[i]

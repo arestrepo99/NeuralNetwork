@@ -74,7 +74,9 @@ class Reshape:
         pass
 
     def forwardPropagate(self, ym1):
+        self.ym1 = ym1
         return self.ym1
     
     def backwardPropagate(self, **kwargs):
-        return kwargs['sigma']
+        self.simga = kwargs['sigma']
+        return self.simga
