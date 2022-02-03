@@ -55,7 +55,7 @@ class Conv:
              (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
              self.dw,self.dphi))
         self.computeLocalGradient = Kernel(programConv.computeLocalGradient, 
-            (batchSize*self.filters, np.prod(self.inputShape[:2]), self.inputShape[2]),
+            (batchSize, np.prod(self.inputShape[:2]), self.inputShape[2]),
             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
             self.sigma, self.dphi, self.w))
         self.learningRule = Kernel(programConv.learningRule, 

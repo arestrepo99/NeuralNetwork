@@ -51,16 +51,19 @@ def test(kernel: Kernel,function,args):
     #Compare outputs to determine if test was passed or failed
     passed = True
     message = ""
+    differingParams = {}
     for ind,param in enumerate(args+kernel.staticParams):
         if isinstance(param,Tensor):
             param = param.get()
         if abs(np.sum(params[ind]-param)) > 1e-5:
             message += f'Param Index {ind} with name "{paramNames[ind]}" was off by {abs(np.sum(params[ind]-param))}\n'
             passed = False
+            differingParams[paramNames[ind]] = (params[ind],param)
     if passed:
         print(bcolors.OKGREEN + "Test Passed" + bcolors.ENDC, function.__name__, )
     else:
         print(bcolors.FAIL + "Test Failed" + bcolors.ENDC, function.__name__)
         print(message)
+    return differingParams
 
 

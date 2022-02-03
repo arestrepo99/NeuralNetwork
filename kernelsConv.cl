@@ -150,7 +150,7 @@ kernel void computeLocalGradient(global float *sigmaOut,
                             global float *dphi,
                             global float *w){
                                 
-    uint batch = get_global_id(0)/filters;
+    uint batch = get_global_id(0);
     uint in1 = get_global_id(1)/inSize2;
     uint in2 = get_global_id(1)%inSize2;
     uint in3 = get_global_id(2);
@@ -165,9 +165,8 @@ kernel void computeLocalGradient(global float *sigmaOut,
 
     uint indOut = batch         *filters*outSize2*outSize1;
     uint indOut2;
-
+    
     sigmaIn[indIn] = 0;
-
     uint end1 = min(kernel1,out1+1);
     uint end2 = min(kernel2,out2+1);
     for(uint k1 = max(inSize1,kernel1+in1)-inSize1; k1<end1; k1+=stride1){
@@ -177,12 +176,12 @@ kernel void computeLocalGradient(global float *sigmaOut,
                 (out1-k1)    *filters*outSize2 + 
                 (out2-k2)    *filters + 
                 out3;
-                sigmaIn[indIn] +=
+                sigmaIn[indIn] += 
                     w[ out3      *kernel1*kernel2*inSize3 +
                         k1          *kernel2*inSize3 +
                         k2          *inSize3 +
-                        in3]
-                    *sigmaOut[indOut+indOut2]*dphi[indOut+indOut2];
+                        in3] *
+                   sigmaOut[indOut+indOut2]*dphi[indOut+indOut2]; 
             }                
         }
     }
@@ -206,7 +205,7 @@ kernel void learningRule(const float lrate,
     }
     w[ind] += -sum*lrate /batchSize;
 
-    if(ind % wsize){
+    if(ind % wsize == 0){
         sum = 0;
         uint j = ind/wsize;
         for(uint batch=0; batch<batchSize; batch++){
