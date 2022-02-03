@@ -78,5 +78,5 @@ class Reshape:
         return self.ym1
     
     def backwardPropagate(self, **kwargs):
-        self.simga = kwargs['sigma']
-        return self.simga
+        self.sigma = kwargs['sigma']
+        return self.sigma

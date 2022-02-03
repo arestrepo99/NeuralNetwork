@@ -9,6 +9,9 @@ from settings import program
 from Tensor import Tensor
 from Kernel import Kernel
 
+class MismatchedDimension(Exception):
+    pass
+
 class NeuralNetwork:
     def __init__(self, layers):
         self.layers = layers
@@ -16,8 +19,9 @@ class NeuralNetwork:
         self.outputShape = layers[-1].outputShape
         self.loss = []
         for ind in range(1,len(self.layers)):
-            assert self.layers[ind].inputShape == self.layers[ind-1].outputShape
-
+            if not self.layers[ind].inputShape == self.layers[ind-1].outputShape:
+                err = f'Dimensions {self.layers[ind].inputShape} and {self.layers[ind-1].outputShape} dont match.'
+                raise MismatchedDimension(err)
     def getLoss(self,):
             self.squareError()
             self.meanError()

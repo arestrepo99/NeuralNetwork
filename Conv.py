@@ -12,7 +12,7 @@ class Conv:
         self.strides = tuple(np.int32(i) for i in strides)
 
         self.activation = activation
-        self.outputShape = (*tuple((size+2*padding-kernel[dim])//strides[dim] 
+        self.outputShape = (*tuple((size+2*padding-kernel[dim])//strides[dim] + 1
                         for dim,size in enumerate(inputShape[:2])),filters)
         self.w = Tensor(np.random.randn(*(filters, *kernel, inputShape[2])))
         self.b = Tensor(np.random.randn(filters))
@@ -48,7 +48,7 @@ class Conv:
         self.computeLocalGradient = Kernel(programConv.computeLocalGradient, 
             (batchSize*self.filters, np.prod(self.inputShape[:2]), self.inputShape[2]),
             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
-            self.sigma, self.db, self.w))
+            self.sigma, self.dphi, self.w))
         #self.learningRule = Kernel(programConv.learningRule, 
         #    (1, 1),
         #    (0, 0, 0, self.dw,self.db,self.w,self.b))
