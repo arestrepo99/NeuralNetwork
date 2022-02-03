@@ -42,7 +42,8 @@ kernel void forwardPropagate(global float *ym1,
 }
 
 kernel void sigmoid(global float *v,
-                    global float *y, global float *dphi){
+                    global float *y, 
+                    global float *dphi){
  
     uint ind = get_global_id(0);
     if (v[ind] > 80){
@@ -188,8 +189,8 @@ kernel void computeLocalGradient(global float *sigmaOut,
 }
  
  
- kernel void learningRule(const float lrate,
-                        const uint filers,
+kernel void learningRule(const float lrate,
+                        const uint filters,
                         const uint batchSize,
                         const uint wsize,
                         global float *dw,
@@ -205,10 +206,11 @@ kernel void computeLocalGradient(global float *sigmaOut,
     }
     w[ind] += -sum*lrate /batchSize;
 
-    if(i % wsize){
+    if(ind % wsize){
         sum = 0;
+        uint j = ind/wsize;
         for(uint batch=0; batch<batchSize; batch++){
-            sum += db[batch*filters + i/wsize];
+            sum += db[batch*filters + j];
         }
         b[j] += -sum*lrate/batchSize;
     }

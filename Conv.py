@@ -59,8 +59,8 @@ class Conv:
             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
             self.sigma, self.dphi, self.w))
         self.learningRule = Kernel(programConv.learningRule, 
-            np.prod(self.w.size),
-            (self.filters, self.batchSize, np.prod(self.w.size[1:]), self.dw,self.db,self.w,self.b))
+            (np.prod(self.w.shape),),
+            (self.filters, self.batchSize, np.prod(self.w.shape[1:]), self.dw,self.db,self.w,self.b))
 
     def forwardPropagate(self, ym1):
         self.ym1 = ym1
