@@ -5,14 +5,22 @@ from Kernel import Kernel
 from settings import program
 
 class Dense:
-    def __init__(self, inputSize, outputSize, activation):
-        self.inputShape = (np.int32(inputSize),)
-        self.outputShape = (np.int32(outputSize),)
+    def __init__(self, outputShape, activation, inputShape = None ):
+        if isinstance(outputShape,int):
+            self.outputShape = (np.int32(outputShape),)
+        else:
+            self.outputShape = tuple(np.int32(i) for i in outputShape)
         self.activation = activation
-
-        self.w = Tensor(np.random.randn(inputSize,outputSize))
-        self.b = Tensor(np.random.randn(outputSize))
+        if inputShape is not None:
+            self.initiateInput(inputShape)
+        else:
+            self.inputShape = None
         
+    def initiateInput(self, inputShape):
+        self.inputShape = tuple(np.int32(i) for i in inputShape)
+        self.w = Tensor(np.random.randn(*inputShape,*self.outputShape))
+        self.b = Tensor(np.random.randn(*self.outputShape))
+
     def allocateMemory(self, batchSize):
         outputSize, = self.outputShape
         inputSize, = self.inputShape
@@ -66,9 +74,23 @@ class Dense:
 
 
 class Reshape:
-    def __init__(self, inputShape, outputShape):
+    def __init__(self, outputShape, inputShape = None):
+        if isinstance(outputShape,int):
+            self.outputShape = (np.int32(outputShape),)
+        else:
+            self.outputShape = outputShape
+        if inputShape is not None:
+            self.initiateInput(inputShape)
+        else:
+            self.inputShape = None
+        
+    def initiateInput(self, inputShape):
+        for ind,size in enumerate(self.outputShape):
+            if size == -1:
+                self.outputShape = list(self.outputShape)
+                self.outputShape[ind] = np.int32(-np.prod(inputShape)/np.prod(self.outputShape))
+                self.outputShape = tuple(self.outputShape)
         self.inputShape = inputShape
-        self.outputShape = outputShape
 
     def allocateMemory(self, batchSize):
         pass

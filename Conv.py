@@ -4,14 +4,23 @@ from Kernel import Kernel
 from settings import programConv
 
 class Conv:
-    def __init__(self, kernel, filters, padding, inputShape , strides, activation):
+    def __init__(self, kernel, filters, padding, strides, activation, inputShape =  None):
         self.kernel = np.int32(kernel)
         self.filters = np.int32(filters)
         self.padding = 0#np.int32(padding)
-        self.inputShape = tuple(np.int32(i) for i in inputShape)
-        self.strides = tuple(np.int32(i) for i in strides)
-
         self.activation = activation
+        self.strides = tuple(np.int32(i) for i in strides)
+        if inputShape is not None:
+            self.initiateInput(inputShape)
+        else:
+            self.inputShape = None
+        
+    def initiateInput(self, inputShape):
+        self.inputShape = tuple(np.int32(i) for i in inputShape)
+        padding = self.padding
+        strides = self.strides    
+        kernel = self.kernel
+        filters = self.filters
         self.outputShape = (*tuple((size+2*padding-kernel[dim])//strides[dim] + 1
                         for dim,size in enumerate(inputShape[:2])),filters)
         self.w = Tensor(np.random.randn(*(filters, *kernel, inputShape[2])))

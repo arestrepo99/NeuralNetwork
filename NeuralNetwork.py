@@ -12,16 +12,26 @@ from Kernel import Kernel
 class MismatchedDimension(Exception):
     pass
 
+class NullInputShape(Exception):
+    pass
+
 class NeuralNetwork:
     def __init__(self, layers):
         self.layers = layers
         self.inputShape = layers[0].inputShape
         self.outputShape = layers[-1].outputShape
         self.loss = []
+
+        # Shape 
+        if self.layers[0].inputShape is None:
+            raise NullInputShape('Input Layer has no defined input shape, pass parameter: inputShape= ')
         for ind in range(1,len(self.layers)):
+            if self.layers[ind].inputShape is None:
+                self.layers[ind].initiateInput(self.layers[ind-1].outputShape)
             if not self.layers[ind].inputShape == self.layers[ind-1].outputShape:
                 err = f'Dimensions {self.layers[ind].inputShape} and {self.layers[ind-1].outputShape} dont match.'
                 raise MismatchedDimension(err)
+                
     def getLoss(self,):
             self.squareError()
             self.meanError()
