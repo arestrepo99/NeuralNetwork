@@ -100,14 +100,14 @@ kernel void learningRule(const float lrate,
     for(uint batch=0; batch<batchSize; batch++){
         Dw += dw[batch*outSize*inSize + i*outSize + j];
     }
-    w[outSize*i+j] += -Dw*lrate;// /batchSize;
+    w[outSize*i+j] += -Dw*lrate/batchSize;
 
     if(i == 0){
         float Db = 0;
         for(uint batch=0; batch<batchSize; batch++){
             Db += db[outSize*batch + j];
         }
-        b[j] += -Db*lrate;// /batchSize;
+        b[j] += -Db*lrate/batchSize;
     }
 }
 

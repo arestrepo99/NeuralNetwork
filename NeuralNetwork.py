@@ -18,10 +18,6 @@ class NullInputShape(Exception):
 class NeuralNetwork:
     def __init__(self, layers):
         self.layers = layers
-        self.inputShape = layers[0].inputShape
-        self.outputShape = layers[-1].outputShape
-        self.loss = []
-
         # Shape 
         if self.layers[0].inputShape is None:
             raise NullInputShape('Input Layer has no defined input shape, pass parameter: inputShape= ')
@@ -31,7 +27,10 @@ class NeuralNetwork:
             if not self.layers[ind].inputShape == self.layers[ind-1].outputShape:
                 err = f'Dimensions {self.layers[ind].inputShape} and {self.layers[ind-1].outputShape} dont match.'
                 raise MismatchedDimension(err)
-                
+        
+        self.inputShape = layers[0].inputShape
+        self.outputShape = layers[-1].outputShape
+        self.loss = []
     def getLoss(self,):
             self.squareError()
             self.meanError()
@@ -71,7 +70,7 @@ class NeuralNetwork:
             
     
     def train(self, x_train, y_train, epochs, lrate, plotfunc):
-        numBatches, batchSize, _ = x_train.shape
+        numBatches, batchSize = x_train.shape[:2]
         self.allocateMemory(batchSize)
         for _ in range(epochs):
             batches = np.array(range(numBatches))

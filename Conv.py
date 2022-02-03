@@ -58,9 +58,9 @@ class Conv:
             (batchSize*self.filters, np.prod(self.inputShape[:2]), self.inputShape[2]),
             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
             self.sigma, self.dphi, self.w))
-        #self.learningRule = Kernel(programConv.learningRule, 
-        #    (1, 1),
-        #    (0, 0, 0, self.dw,self.db,self.w,self.b))
+        self.learningRule = Kernel(programConv.learningRule, 
+            np.prod(self.w.size),
+            (self.filters, self.batchSize, np.prod(self.w.size[1:]), self.dw,self.db,self.w,self.b))
 
     def forwardPropagate(self, ym1):
         self.ym1 = ym1
@@ -77,6 +77,6 @@ class Conv:
             self.computedb(kwargs['sigma'])
             self.computeGradients(self.ym1, kwargs['sigma'])
         self.computeLocalGradient(kwargs['sigma'])
-        #self.learningRule(np.float32(kwargs['lrate']))
+        self.learningRule(np.float32(kwargs['lrate']))
         return self.sigma
         

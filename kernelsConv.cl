@@ -187,3 +187,29 @@ kernel void computeLocalGradient(global float *sigmaOut,
     }
 }
  
+ 
+ kernel void learningRule(const float lrate,
+                        const uint filers,
+                        const uint batchSize,
+                        const uint wsize,
+                        global float *dw,
+                        global float *db,
+                        global float *w,
+                        global float *b){
+
+    uint ind = get_global_id(0);
+
+    float sum = 0;
+    for(uint batch=0; batch<batchSize; batch++){
+        sum += dw[batch*filters*wsize + ind];
+    }
+    w[ind] += -sum*lrate /batchSize;
+
+    if(i % wsize){
+        sum = 0;
+        for(uint batch=0; batch<batchSize; batch++){
+            sum += db[batch*filters + i/wsize];
+        }
+        b[j] += -sum*lrate/batchSize;
+    }
+}
