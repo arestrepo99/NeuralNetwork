@@ -1,4 +1,3 @@
-
 import numpy as np
 from Tensor import Tensor
 from Kernel import Kernel
@@ -39,9 +38,6 @@ class Dense:
         self.activate = Kernel(self.activation(program), 
             (batchSize*outputSize,),
             (outputSize, self.v, self.y, self.dphi))
-        self.computeError = Kernel(program.computeError, 
-            (batchSize*outputSize,),
-            (self.y, self.dphi, self.db))
         self.computedb = Kernel(program.computedb, 
             (batchSize*outputSize,),
             (self.dphi, self.db))
@@ -61,14 +57,11 @@ class Dense:
         self.activate()
         return self.y
     
-    def backwardPropagate(self, **kwargs):
-        if 'Y' in kwargs:
-            self.computeError(kwargs['Y'], kwargs['e'])
-        if 'sigma' in kwargs:
-            self.computedb(kwargs['sigma'])
+    def backwardPropagate(self, sigma, lrate):
+        self.computedb(sigma)
         self.computeGradients(self.ym1)
         self.computeLocalGradient()
-        self.learningRule(np.float32(kwargs['lrate']))
+        self.learningRule(np.float32(lrate))
         return self.sigma
         
 
@@ -85,20 +78,17 @@ class Reshape:
             self.inputShape = None
         
     def initiateInput(self, inputShape):
-        for ind,size in enumerate(self.outputShape):
-            if size == -1:
-                self.outputShape = list(self.outputShape)
-                self.outputShape[ind] = np.int32(-np.prod(inputShape)/np.prod(self.outputShape))
-                self.outputShape = tuple(self.outputShape)
         self.inputShape = inputShape
 
     def allocateMemory(self, batchSize):
+        self.batchSize = batchSize
         pass
 
     def forwardPropagate(self, ym1):
         self.ym1 = ym1
-        return self.ym1
+        self.y = self.ym1.reshape((self.batchSize,*self.outputShape))
+        return self.y
     
-    def backwardPropagate(self, **kwargs):
-        self.sigma = kwargs['sigma']
+    def backwardPropagate(self, sigma ,lrate):
+        self.sigma = sigma.reshape((self.batchSize,*self.inputShape))
         return self.sigma

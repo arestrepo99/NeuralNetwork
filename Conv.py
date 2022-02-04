@@ -44,9 +44,6 @@ class Conv:
         self.activate = Kernel(self.activation(programConv), 
              (np.prod((batchSize,*self.outputShape)),),
              (self.v, self.y, self.dphi))
-        self.computeError = Kernel(programConv.computeError, 
-             (np.prod((batchSize,*self.outputShape)),),
-             (self.y,))
         self.computedb = Kernel(programConv.computedb, 
              (batchSize,self.filters),
              (*self.outputShape,self.dphi,self.db))
@@ -68,15 +65,10 @@ class Conv:
         self.activate()
         return self.y
     
-    def backwardPropagate(self, **kwargs):
-        if 'Y' in kwargs:
-            self.computeError(kwargs['Y'], kwargs['e'])
-            self.computedb(kwargs['e'])
-            self.computeGradients(self.ym1, kwargs['e'])
-        if 'sigma' in kwargs:
-            self.computedb(kwargs['sigma'])
-            self.computeGradients(self.ym1, kwargs['sigma'])
-        self.computeLocalGradient(kwargs['sigma'])
-        self.learningRule(np.float32(kwargs['lrate']))
+    def backwardPropagate(self, sigma, lrate):
+        self.computedb(sigma)
+        self.computeGradients(self.ym1, sigma)
+        self.computeLocalGradient(sigma)
+        self.learningRule(np.float32(lrate))
         return self.sigma
         

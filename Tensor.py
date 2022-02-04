@@ -35,3 +35,13 @@ class Tensor:
     def __getitem__(self, key):
         size = np.prod(self.shape[1:])
         return Tensor(self.buffer[key*size*4:(key+1)*size*4], shape = self.shape[1:])
+    
+    def reshape(self, shape):
+        for ind,size in enumerate(shape):
+            if size == -1:
+                shape = list(shape)
+                shape[ind] = np.int32(-np.prod(self.shape)/np.prod(shape))
+                shape = tuple(shape)
+        if np.prod(shape) == np.prod(self.shape):
+            raise Exception("New shape does not match dimensions")
+        return Tensor(self.buffer, shape = shape)

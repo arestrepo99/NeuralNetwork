@@ -3,14 +3,22 @@ import pyopencl as cl
 from Tensor import Tensor
 
 from settings import queue
- 
+
+class InvalidGlobalSize(Exception):
+    pass
+class InvalidParameters(Exception):
+    pass
+
 class Kernel():
     def __init__(self, function, globalSize, staticParams):
         self.function = function
         self.staticParams  = staticParams
         self.globalSize = globalSize
         self.localSize = None
-    
+        if not isinstance(self.staticParams,tuple):
+            raise InvalidParameters("Parameters must be a tuple")
+        if not isinstance(self.staticParams,tuple):
+            raise InvalidGlobalSize("Global Size must be a tuple")
 
     def __call__(self, *params):
         def getBuffers(params):

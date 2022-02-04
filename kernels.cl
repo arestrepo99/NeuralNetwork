@@ -36,12 +36,10 @@ kernel void sigmoid(const uint outSize,
 }
 kernel void computeError(global float *Y,
                              global float *e,
-                             global float *y,
-                             global float *dphi,
-                             global float *db){
+                             global float *y){
     uint ind = get_global_id(0);
-    e[ind] = Y[ind]-y[ind];
-    db[ind]= -e[ind]*dphi[ind];
+    e[ind] = -(Y[ind]-y[ind]); //multiplied by -1 to substitute sigma
+    //db[ind]= -e[ind]*dphi[ind];
 }
 
 kernel void computedb(global float *sigma,

@@ -25,7 +25,7 @@ kernel void forwardPropagate(global float *ym1,
                 output2     *filters + 
                 filter      ;
     uint indIn = batch               *inSize3*inSize2*inSize1 + 
-                output1*stride1     *inSize3*inSize2 + //probably broken lol
+                output1*stride1     *inSize3*inSize2 +
                 output2*stride2     *inSize3;
     
     v[indOut] = b[filter];
@@ -57,14 +57,6 @@ kernel void sigmoid(global float *v,
 }
 
 
-kernel void computeError(global float *Y,
-                             global float *e,
-                             global float *y){
-
-    uint ind = get_global_id(0);
-    e[ind] = -(Y[ind]-y[ind]); //multiplied by -1 to substitute sigma
-}
-
 kernel void computedb(global float *sigma,
                              const uint outSize1,
                              const uint outSize2,
@@ -80,7 +72,7 @@ kernel void computedb(global float *sigma,
     uint ind2;
     for(uint o1 = 0; o1<outSize1; o1++){
         for(uint o2 = 0; o2<outSize2; o2++){
-            ind2 = o1*outSize1*filters +  o2*filters;
+            ind2 = o1*outSize2*filters +  o2*filters;
             db[ind] += sigma[indOut+ind2]*dphi[indOut+ind2];
         }
     }
@@ -103,8 +95,8 @@ kernel void computeGradients(global float * ym1,
                         ){
     uint batch = get_global_id(0)/filters;
     uint filter = get_global_id(0)%filters;
-    uint k1 = get_global_id(1)%kernel2;
-    uint k2 = get_global_id(1)/kernel2;
+    uint k1 = get_global_id(1)/kernel2;
+    uint k2 = get_global_id(1)%kernel2;
     uint dim = get_global_id(2);
     
     uint wind = batch        *filters*kernel1*kernel2*inSize3 +
@@ -160,8 +152,11 @@ kernel void computeLocalGradient(global float *sigmaOut,
                  in2                  *inSize3+
                  in3;  
 
-    uint out1 = in1*stride1;
-    uint out2 = in2*stride2;
+    uint out1 = in1/stride1;
+    uint out2 = in2/stride2;
+    
+    uint out1Phase = in1%stride1;
+    uint out2Phase = in2%stride2;
 
     uint indOut = batch         *filters*outSize2*outSize1;
     uint indOut2;
@@ -177,9 +172,9 @@ kernel void computeLocalGradient(global float *sigmaOut,
                 (out2-k2)    *filters + 
                 out3;
                 sigmaIn[indIn] += 
-                    w[ out3      *kernel1*kernel2*inSize3 +
-                        k1          *kernel2*inSize3 +
-                        k2          *inSize3 +
+                    w[ out3             *kernel1*kernel2*inSize3 +
+                        k1+out1Phase    *kernel2*inSize3 +
+                        k2+out2Phase    *inSize3 +
                         in3] *
                    sigmaOut[indOut+indOut2]*dphi[indOut+indOut2]; 
             }                

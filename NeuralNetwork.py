@@ -1,11 +1,6 @@
-# pylande: reportMissingImports=false
-import enum
 import numpy as np
 import pyopencl as cl
-import time
-
 from settings import program
-
 from Tensor import Tensor
 from Kernel import Kernel
 
@@ -31,7 +26,8 @@ class NeuralNetwork:
         self.inputShape = layers[0].inputShape
         self.outputShape = layers[-1].outputShape
         self.loss = []
-    def getLoss(self,):
+    def getLoss(self,Y):
+            self.computeError(Y, self.e)
             self.squareError()
             self.meanError()
             return(self.E.get().mean())
@@ -45,28 +41,26 @@ class NeuralNetwork:
 
         [layer.allocateMemory(batchSize) for layer in self.layers]
 
-
-
+        self.computeError = Kernel(program.computeError, 
+            (batchSize*np.prod(self.outputShape),),
+            (self.layers[-1].y,))
         self.squareError = Kernel(program.squareError, (np.prod((self.batchSize,*self.outputShape)),),
                         (self.e, self.e2))
         self.meanError = Kernel(program.meanError, (np.prod(self.outputShape),),
                         (batchSize, np.prod(self.outputShape), self.e2, self.E))
-        
-        
     
     def predict(self, x):
         ym1 = x
         for layer in self.layers:
             ym1 = layer.forwardPropagate(ym1)
         return ym1
-        
+
     def gradientDescent(self, X, Y, lrate):
         self.ypred = self.predict(X)
-        for ind,layer in enumerate(self.layers[::-1]):
-            if ind == 0:
-                sigma = layer.backwardPropagate(Y = Y, e = self.e, lrate = lrate)
-            else:
-                sigma = layer.backwardPropagate(sigma = sigma, lrate = lrate)
+        self.loss.append(self.getLoss(Y))
+        sigma = self.e
+        for layer in self.layers[::-1]:
+            sigma = layer.backwardPropagate(sigma,lrate)
             
     
     def train(self, x_train, y_train, epochs, lrate, plotfunc):
@@ -77,8 +71,7 @@ class NeuralNetwork:
             np.random.shuffle(batches)
             for batch in batches:
                 self.gradientDescent(x_train[batch], y_train[batch], lrate)
-                self.loss.append(self.getLoss())
-                plotfunc(self.loss)
+                plotfunc(self)
     
     def testGrads(self, X, Y, step = 0.1):
         self.gradientDescent(X, Y, 0)
