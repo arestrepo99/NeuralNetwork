@@ -78,6 +78,7 @@ class Reshape:
             self.inputShape = None
         
     def initiateInput(self, inputShape):
+        self.outputShape = Tensor.getSpecifiedShape(inputShape,self.outputShape)
         self.inputShape = inputShape
 
     def allocateMemory(self, batchSize):

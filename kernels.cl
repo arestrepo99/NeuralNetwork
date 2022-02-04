@@ -31,7 +31,7 @@ kernel void sigmoid(const uint outSize,
         v[ind] = -80;
     }
 
-    y[ind] = 1/( 1 + exp(-v[ind]) );
+    y[ind] = 1/( 1 + exp(-v[ind]));
     dphi[ind] = y[ind]*(1-y[ind]);
 }
 kernel void computeError(global float *Y,

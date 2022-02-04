@@ -151,30 +151,29 @@ kernel void computeLocalGradient(global float *sigmaOut,
                  in1                  *inSize3*inSize2 + 
                  in2                  *inSize3+
                  in3;  
-
-    uint out1 = in1/stride1;
-    uint out2 = in2/stride2;
     
-    uint out1Phase = in1%stride1;
-    uint out2Phase = in2%stride2;
+    uint phase1 = in1%stride1;
+    uint phase2 = in2%stride2;
 
     uint indOut = batch         *filters*outSize2*outSize1;
     uint indOut2;
     
     sigmaIn[indIn] = 0;
-    uint end1 = min(kernel1,out1+1);
-    uint end2 = min(kernel2,out2+1);
-    for(uint k1 = max(inSize1,kernel1+in1)-inSize1; k1<end1; k1+=stride1){
-        for(uint k2 = max(inSize2,kernel2+in2)-inSize2; k2<end2; k2+=stride2){
+    uint end1 = kernel1+1+in1 - max(kernel1,1+in1);
+    uint end2 = kernel1+1+in2 - max(kernel1,1+in2);
+    for(uint k1 = max(phase1+inSize1,in1+kernel1+1)-inSize1; 
+            k1<end1; k1+=stride1){
+        for(uint k2 = max(phase2+inSize2,in2+kernel2+1)-inSize2;
+                k2<end2; k2+=stride2){
             for(uint out3 = 0; out3<filters; out3++){
                 indOut2 =
-                (out1-k1)    *filters*outSize2 + 
-                (out2-k2)    *filters + 
+                (in1-k1)/stride1    *filters*outSize2 + 
+                (in2-k2)/stride2    *filters + 
                 out3;
                 sigmaIn[indIn] += 
                     w[ out3             *kernel1*kernel2*inSize3 +
-                        k1+out1Phase    *kernel2*inSize3 +
-                        k2+out2Phase    *inSize3 +
+                        k1     *kernel2*inSize3 +
+                        k2     *inSize3 +
                         in3] *
                    sigmaOut[indOut+indOut2]*dphi[indOut+indOut2]; 
             }                

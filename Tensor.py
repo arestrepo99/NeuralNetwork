@@ -36,12 +36,17 @@ class Tensor:
         size = np.prod(self.shape[1:])
         return Tensor(self.buffer[key*size*4:(key+1)*size*4], shape = self.shape[1:])
     
-    def reshape(self, shape):
-        for ind,size in enumerate(shape):
+    def getSpecifiedShape(shape,reshape):
+        for ind,size in enumerate(reshape):
             if size == -1:
-                shape = list(shape)
-                shape[ind] = np.int32(-np.prod(self.shape)/np.prod(shape))
-                shape = tuple(shape)
-        if np.prod(shape) == np.prod(self.shape):
-            raise Exception("New shape does not match dimensions")
+                reshape = list(reshape)
+                reshape[ind] = np.int32(-np.prod(shape)/np.prod(reshape))
+                reshape = tuple(reshape)
+        return reshape
+
+    def reshape(self, shape):
+        shape = Tensor.getSpecifiedShape(self.shape,shape)
+        if not np.prod(shape) == np.prod(self.shape):
+            raise Exception(f'New shape length {np.prod(shape)} does not match ' + \
+                f'old shape length {np.prod(self.shape)} dimension')
         return Tensor(self.buffer, shape = shape)

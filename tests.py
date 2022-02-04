@@ -10,7 +10,7 @@ from inspect import signature
 from sklearn.linear_model import LinearRegression
 
 
-TOLERANCE = 1e-7
+TOLERANCE = 1e-5
 
 def parse(kernelFuncion):
     kernelFuncion = kernelFuncion.replace('kernel void','def')
@@ -34,6 +34,8 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+    Passed = OKGREEN + "PASSED" + ENDC
+    Failed = FAIL + "FAILED" + ENDC
 
 def test(kernel: Kernel,function,args): 
     params = []
@@ -63,9 +65,9 @@ def test(kernel: Kernel,function,args):
             passed = False
             differingParams[paramNames[ind]] = (params[ind],param)
     if passed:
-        print(bcolors.OKGREEN + "Test Passed" + bcolors.ENDC, function.__name__, )
+        print(f'{bcolors.Passed} {function.__name__}')
     else:
-        print(bcolors.FAIL + "Test Failed" + bcolors.ENDC, function.__name__)
+        print(f'{bcolors.Failed} {function.__name__}')
         print(message)
     return differingParams
 
@@ -114,9 +116,9 @@ def gradientTest(model: NeuralNetwork, step = 0.1):
             r2 = round(reg.score(x,y),PRESITION)
             paramName = ['dw','db'][paramInd]
             if abs(r2-1) < TOLERANCE:
-                message = f'Layer {ind} {paramName} {bcolors.OKGREEN} PASSED {bcolors.ENDC}'
+                message = bcolors.Passed
             else:
-                message = f'Layer {ind} {paramName} {bcolors.FAIL} FAILED {bcolors.ENDC}'
-            print(f'{message}  r2= {r2}, m= {m}, b= {b},')
+                message = bcolors.Failed
+            print(f'{message} Layer {ind} {paramName} r2= {r2}, m= {m}, b= {b},')
     return dw,db
         
