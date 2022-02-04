@@ -9,8 +9,10 @@ from itertools import product
 from inspect import signature
 from sklearn.linear_model import LinearRegression
 
+from testsConv import forwardPropagate
 
-TOLERANCE = 1e-5
+
+TOLERANCE = 1e-4
 
 def parse(kernelFuncion):
     kernelFuncion = kernelFuncion.replace('kernel void','def')
@@ -37,7 +39,7 @@ class bcolors:
     Passed = OKGREEN + "PASSED" + ENDC
     Failed = FAIL + "FAILED" + ENDC
 
-def test(kernel: Kernel,function,args): 
+def test(kernel: Kernel, function, args): 
     params = []
     for param in list(args)+list(kernel.staticParams):
         if isinstance(param,Tensor):
@@ -48,7 +50,7 @@ def test(kernel: Kernel,function,args):
     for globalIndex in product(*(list(range(i)) for i in kernel.globalSize)):
         function(globalIndex,*params)
     # Running in GPU
-    kernel(*args)
+    output = kernel(*args)
 
     #Getting Param Names 
     paramNames = str(signature(function))[1:-1].split(', ')[1:]
@@ -69,13 +71,18 @@ def test(kernel: Kernel,function,args):
     else:
         print(f'{bcolors.Failed} {function.__name__}')
         print(message)
-    return differingParams
+    return output
+
+
+def getRandomData(model: NeuralNetwork, batchSize):
+    model.allocateMemory(batchSize)
+    X = Tensor(np.random.randn(batchSize,*model.inputShape))
+    Y = Tensor(np.random.randn(batchSize,*model.outputShape))
+    return X,Y
 
 
 def gradientTest(model: NeuralNetwork, step = 0.1):
-    model.allocateMemory(1)
-    X = Tensor(np.random.randn(1,*model.inputShape))
-    Y = Tensor(np.random.randn(1,*model.outputShape))
+    X,Y = getRandomData(model,1)
     model.gradientDescent(X, Y, 0)
     dw = []
     db = []
@@ -122,3 +129,12 @@ def gradientTest(model: NeuralNetwork, step = 0.1):
             print(f'{message} Layer {ind} {paramName} r2= {r2}, m= {m}, b= {b},')
     return dw,db
         
+def testModel(model):
+    dw,db = gradientTest(model)
+    X,Y = getRandomData(model,10)
+    ym1 = X
+    for layer in model.layers:
+        ym1 = test(layer.forwardPropagate(ym1), forwardPropagate, ym1)
+    model.ypred = ym1
+    test(model.computeError,computeError,)
+

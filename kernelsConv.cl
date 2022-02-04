@@ -152,31 +152,28 @@ kernel void computeLocalGradient(global float *sigmaOut,
                  in2                  *inSize3+
                  in3;  
     
-    uint phase1 = in1%stride1;
-    uint phase2 = in2%stride2;
-
     uint indOut = batch         *filters*outSize2*outSize1;
     uint indOut2;
     
     sigmaIn[indIn] = 0;
-    uint end1 = kernel1+1+in1 - max(kernel1,in1);
-    uint end2 = kernel2+1+in2 - max(kernel2,in2);
-    for(uint k1 = max(phase1+inSize1,in1+kernel1+1)-inSize1; 
-            k1<end1; k1+=stride1){
-        for(uint k2 = max(phase2+inSize2,in2+kernel2+1)-inSize2;
-                k2<end2; k2+=stride2){
-            for(uint out3 = 0; out3<filters; out3++){
-                indOut2 =
-                (in1-k1)/stride1    *filters*outSize2 + 
-                (in2-k2)/stride2    *filters + 
-                out3;
-                 sigmaIn[indIn] += 
-                    w[ out3             *kernel1*kernel2*inSize3 +
-                        k1     *kernel2*inSize3 +
-                        k2     *inSize3 +
-                        in3] *
-                   sigmaOut[indOut+indOut2]*dphi[indOut+indOut2];  
-            }                
+    for(uint k1 =in1%stride1; k1<kernel1; k1+=stride1){
+        if ( in1>=k1 && in1+kernel1<k1+inSize1+1){ 
+            for(uint k2 =in2%stride2; k2<kernel2; k2+=stride2){
+                if(in2>=k2 && in2+kernel2<k2+inSize2+1) {
+                    for(uint out3 = 0; out3<filters; out3++){
+                        indOut2 =
+                        (in1-k1)/stride1    *filters*outSize2 + 
+                        (in2-k2)/stride2    *filters + 
+                        out3;
+                        sigmaIn[indIn] += 
+                            w[ out3             *kernel1*kernel2*inSize3 +
+                                k1     *kernel2*inSize3 +
+                                k2     *inSize3 +
+                                in3] *
+                        sigmaOut[indOut+indOut2]*dphi[indOut+indOut2]; 
+                    }
+                }                
+            }
         }
     }
 }

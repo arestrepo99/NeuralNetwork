@@ -32,7 +32,7 @@ class Conv:
         self.v = Tensor((self.batchSize,*self.outputShape))
         self.y = Tensor((self.batchSize,*self.outputShape))
         self.dphi = Tensor((self.batchSize,*self.outputShape))
-        self.sigma = Tensor((self.batchSize,*self.inputShape))#Missing something
+        self.sigma = Tensor((self.batchSize,*self.inputShape))
         self.dw = Tensor((batchSize, self.filters, *self.kernel, self.inputShape[2]))
         self.db = Tensor((batchSize, self.filters))
         

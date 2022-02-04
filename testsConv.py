@@ -121,24 +121,17 @@ def computeLocalGradient(globalIndex,
     in2 = globalIndex[1]%inSize2
     in3 = globalIndex[2]
 
-    phase1 = in1%stride1
-    phase2 = in2%stride2
-
     sigmaIn[batch,in1,in2,in3] = 0
-    for k1 in range(max(phase1+inSize1,in1+kernel1+1)-inSize1,
-                    kernel1+1+in1 - max(kernel1,in1+stride1-1),
-                    stride1):
-        for k2 in range(max(phase2+inSize2,in2+kernel2+1)-inSize2,
-                        kernel1+1+in2 - max(kernel1,in2+stride2-1),
-                        stride2):
-            for out3 in range(filters):
-                assert in1-k1>=0
-                assert in2-k2>=0
-                ind1 = (in1-k1)//stride1
-                ind2 = (in2-k2)//stride2
-                sigmaIn[batch,in1,in2,in3] += w[out3,k1,k2,in3] \
-                    *sigmaOut[batch,ind1,ind2,out3] \
-                        *dphi[batch,ind1,ind2,out3]
+    for k1 in range(in1%stride1,kernel1,stride1):
+        if in1>=k1 and in1+kernel1<k1+inSize1+1:
+            for k2 in range(in2%stride2,kernel2,stride2):
+                if in2>=k2 and in2+kernel2<k2+inSize2+1:
+                    for out3 in range(filters):
+                        ind1 = (in1-k1)//stride1
+                        ind2 = (in2-k2)//stride2
+                        sigmaIn[batch,in1,in2,in3] += w[out3,k1,k2,in3] \
+                            *sigmaOut[batch,ind1,ind2,out3] \
+                                *dphi[batch,ind1,ind2,out3]
 
      
 def learningRule(globalIndex,
