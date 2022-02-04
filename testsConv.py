@@ -121,18 +121,15 @@ def computeLocalGradient(globalIndex,
     in2 = globalIndex[1]%inSize2
     in3 = globalIndex[2]
 
-    out1 = in1//stride1
-    out2 = in2//stride2
-
     phase1 = in1%stride1
     phase2 = in2%stride2
 
     sigmaIn[batch,in1,in2,in3] = 0
     for k1 in range(max(phase1+inSize1,in1+kernel1+1)-inSize1,
-                    kernel1+1+in1 - max(kernel1,1+in1),
+                    kernel1+1+in1 - max(kernel1,in1+stride1-1),
                     stride1):
         for k2 in range(max(phase2+inSize2,in2+kernel2+1)-inSize2,
-                        kernel1+1+in2 - max(kernel1,1+in2),
+                        kernel1+1+in2 - max(kernel1,in2+stride2-1),
                         stride2):
             for out3 in range(filters):
                 assert in1-k1>=0
