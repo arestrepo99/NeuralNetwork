@@ -1,7 +1,7 @@
 import numpy as np
 from Tensor import Tensor
 from Kernel import Kernel
-from settings import programConv
+from settings import convolutionalcl
 
 class Conv:
     def __init__(self, kernel, filters, padding, strides, activation, inputShape =  None):
@@ -36,26 +36,26 @@ class Conv:
         self.dw = Tensor((batchSize, self.filters, *self.kernel, self.inputShape[2]))
         self.db = Tensor((batchSize, self.filters))
         
-        self.GPUForwardPropagate = Kernel(programConv.forwardPropagate,
+        self.GPUForwardPropagate = Kernel(convolutionalcl.forwardPropagate,
             (batchSize, self.filters, np.prod(self.outputShape[:2])),
             (*self.outputShape[:2], self.filters,
              *self.strides, *self.kernel, *self.inputShape,
              self.v, self.w, self.b))
-        self.activate = Kernel(self.activation(programConv), 
+        self.activate = Kernel(self.activation(convolutionalcl), 
              (np.prod((batchSize,*self.outputShape)),),
              (self.v, self.y, self.dphi))
-        self.computedb = Kernel(programConv.computedb, 
+        self.computedb = Kernel(convolutionalcl.computedb, 
              (batchSize,self.filters),
              (*self.outputShape,self.dphi,self.db))
-        self.computeGradients = Kernel(programConv.computeGradients, 
+        self.computeGradients = Kernel(convolutionalcl.computeGradients, 
              (batchSize*self.filters,np.prod(self.kernel),self.inputShape[2]),
              (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
              self.dw,self.dphi))
-        self.computeLocalGradient = Kernel(programConv.computeLocalGradient, 
+        self.computeLocalGradient = Kernel(convolutionalcl.computeLocalGradient, 
             (batchSize, np.prod(self.inputShape[:2]), self.inputShape[2]),
             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
             self.sigma, self.dphi, self.w))
-        self.learningRule = Kernel(programConv.learningRule, 
+        self.learningRule = Kernel(convolutionalcl.learningRule, 
             (np.prod(self.w.shape),),
             (self.filters, self.batchSize, np.prod(self.w.shape[1:]), self.dw,self.db,self.w,self.b))
 

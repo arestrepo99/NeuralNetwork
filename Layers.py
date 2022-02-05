@@ -1,10 +1,11 @@
 import numpy as np
 from Tensor import Tensor
 from Kernel import Kernel
-from settings import program, programConv
+from settings import densecl, convolutionalcl, activationscl
 
-class Activation:
-    sigmoid = program.sigmoid
+class sigmoid:
+    kernel = activationscl.sigmoid
+
 
 class Layer:
     def __str__(self) -> str:
@@ -41,22 +42,22 @@ class Dense(Layer):
         self.dw = Tensor((batchSize,inputSize,outputSize))
         self.db = Tensor((batchSize,outputSize))
 
-        self.GPUForwardPropagate = Kernel(program.forwardPropagate,
+        self.GPUForwardPropagate = Kernel(densecl.forwardPropagate,
             (batchSize,outputSize),
             (inputSize, outputSize, self.v, self.w, self.b))
-        self.activate = Kernel(self.activation, 
+        self.activate = Kernel(self.activation.kernel, 
             (batchSize*outputSize,),
-            (outputSize, self.v, self.y, self.dphi))
-        self.computedb = Kernel(program.computedb, 
+            (self.v, self.y, self.dphi))
+        self.computedb = Kernel(densecl.computedb, 
             (batchSize*outputSize,),
             (self.dphi, self.db))
-        self.computeGradients = Kernel(program.computeGradients, 
+        self.computeGradients = Kernel(densecl.computeGradients, 
             (batchSize, inputSize, outputSize),
             (inputSize, outputSize, self.dw, self.db))
-        self.computeLocalGradient = Kernel(program.computeLocalGradient, 
+        self.computeLocalGradient = Kernel(densecl.computeLocalGradient, 
             (batchSize, inputSize),
             (inputSize, outputSize, self.sigma, self.db, self.dphi, self.w))
-        self.learningRule = Kernel(program.learningRule, 
+        self.learningRule = Kernel(densecl.learningRule, 
             (inputSize, outputSize),
             (inputSize, outputSize, batchSize, self.dw,self.db,self.w,self.b))
         
@@ -73,16 +74,16 @@ class Dense(Layer):
         self.learningRule(np.float32(lrate))
         return self.sigma
     
-    def unpack(initiateParams,w,b):
-        outputShape, activation, inputShape = initiateParams
+    def unpack(params):
+        outputShape, activation, inputShape, w, b = params
         instance = Dense(outputShape, activation, inputShape= inputShape)
         instance.w.set(w)
         instance.b.set(b)
+        return instance
 
     def pack(self):
-        initiateParams = self.outputShape,self.activation,self.inputShape
-        w,b = self.w.get(), self.b.get()
-        return (self.__class__, initiateParams, w, b)
+        initiateParams = self.outputShape,self.activation,self.inputShape, self.w.get(), self.b.get()
+        return (self.__class__, initiateParams)
 
         
 
@@ -119,26 +120,26 @@ class Conv(Layer):
         self.dw = Tensor((batchSize, self.filters, *self.kernel, self.inputShape[2]))
         self.db = Tensor((batchSize, self.filters))
         
-        self.GPUForwardPropagate = Kernel(programConv.forwardPropagate,
+        self.GPUForwardPropagate = Kernel(convolutionalcl.forwardPropagate,
             (batchSize, self.filters, np.prod(self.outputShape[:2])),
             (*self.outputShape[:2], self.filters,
              *self.strides, *self.kernel, *self.inputShape,
              self.v, self.w, self.b))
-        self.activate = Kernel(self.activation(programConv), 
+        self.activate = Kernel(self.activation.kernel, 
              (np.prod((batchSize,*self.outputShape)),),
              (self.v, self.y, self.dphi))
-        self.computedb = Kernel(programConv.computedb, 
+        self.computedb = Kernel(convolutionalcl.computedb, 
              (batchSize,self.filters),
              (*self.outputShape,self.dphi,self.db))
-        self.computeGradients = Kernel(programConv.computeGradients, 
+        self.computeGradients = Kernel(convolutionalcl.computeGradients, 
              (batchSize*self.filters,np.prod(self.kernel),self.inputShape[2]),
              (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
              self.dw,self.dphi))
-        self.computeLocalGradient = Kernel(programConv.computeLocalGradient, 
+        self.computeLocalGradient = Kernel(convolutionalcl.computeLocalGradient, 
             (batchSize, np.prod(self.inputShape[:2]), self.inputShape[2]),
             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
             self.sigma, self.dphi, self.w))
-        self.learningRule = Kernel(programConv.learningRule, 
+        self.learningRule = Kernel(convolutionalcl.learningRule, 
             (np.prod(self.w.shape),),
             (self.filters, self.batchSize, np.prod(self.w.shape[1:]), self.dw,self.db,self.w,self.b))
 
@@ -157,15 +158,16 @@ class Conv(Layer):
     
     def pack(self):
         initiateParams = self.kernel, self.filters, self.padding, \
-                self.strides, self.activation, self.inputShape
+                self.strides, self.activation, self.inputShape, self.w.get(), self.b.get()
         w,b = self.w.get(), self.b.get()
-        return (self.__class__, initiateParams, w, b)
+        return (self.__class__, initiateParams)
 
-    def unpack(initiateParams,w,b):
-        kernel, filters, padding, strides, activation, inputShape = initiateParams
+    def unpack(params):
+        kernel, filters, padding, strides, activation, inputShape, w, b = params
         instance = Conv(kernel, filters, padding, strides, activation, inputShape= inputShape)
         instance.w.set(w)
         instance.b.set(b)
+        return instance
 
         
 class Reshape(Layer):
@@ -199,9 +201,10 @@ class Reshape(Layer):
         self.sigma = sigma.reshape((self.batchSize,*self.inputShape))
         return self.sigma
     
-    def unpack(initiateParams,w,b):
+    def unpack(initiateParams):
         outputShape, inputShape = initiateParams
         instance = Reshape(outputShape, inputShape= inputShape)
+        return instance
         
     def pack(self):
         initiateParams = self.outputShape, self.inputShape

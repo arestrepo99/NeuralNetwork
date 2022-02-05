@@ -1,7 +1,7 @@
 import numpy as np
 import pyopencl as cl
 from Layers import Layer, Reshape
-from settings import program
+from settings import densecl
 from Tensor import Tensor
 from Kernel import Kernel
 import pickle
@@ -43,23 +43,27 @@ class NeuralNetwork:
 
         [layer.allocateMemory(batchSize) for layer in self.layers]
 
-        self.computeError = Kernel(program.computeError, 
+        self.computeError = Kernel(densecl.computeError, 
             (batchSize*np.prod(self.outputShape),),
             (self.layers[-1].y,))
-        self.squareError = Kernel(program.squareError, (np.prod((self.batchSize,*self.outputShape)),),
+        self.squareError = Kernel(densecl.squareError, (np.prod((self.batchSize,*self.outputShape)),),
                         (self.e, self.e2))
-        self.meanError = Kernel(program.meanError, (np.prod(self.outputShape),),
+        self.meanError = Kernel(densecl.meanError, (np.prod(self.outputShape),),
                         (batchSize, np.prod(self.outputShape), self.e2, self.E))
     def save(self, name):
         import os
-        os.mkdir('models')
+        if not os.path.isdir('models'):
+            os.mkdir('models')
         pickle.dump((self.loss, 
                     [layer.pack() for layer in self.layers]), 
             open('models/'+name+'.pkl', 'wb'))
     
     def load(name):
-        loss, layers = pickle.load()
-        model = NeuralNetwork([layer[0].unpack(*layer[1]) for layer in layers])
+        loss, packedlayers = pickle.load(open('models/'+name+'.pkl', 'rb'))
+        layers = []
+        for layertype, params in packedlayers:
+            layers.append(layertype.unpack(params))
+        model = NeuralNetwork(layers)
         model.loss = loss
         return model
 
@@ -87,12 +91,11 @@ class NeuralNetwork:
                 self.gradientDescent(x_train[batch], y_train[batch], lrate)
                 plotfunc(self)
     
+
     def __str__(self) -> str:
 
         str = f'\t\t MODEL SUMMARY: \nInput: \t\t {self.inputShape}'
         for layer in self.ayers:
             str += layer.__str__()
-
-sigmoid = lambda x: x.sigmoid
 
 #https://learnopencv.com/number-of-parameters-and-tensor-sizes-in-convolutional-neural-network/
