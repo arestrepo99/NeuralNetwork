@@ -1,8 +1,10 @@
 import numpy as np
 import pyopencl as cl
+from Layers import Layer, Reshape
 from settings import program
 from Tensor import Tensor
 from Kernel import Kernel
+import pickle
 
 class MismatchedDimension(Exception):
     pass
@@ -48,7 +50,19 @@ class NeuralNetwork:
                         (self.e, self.e2))
         self.meanError = Kernel(program.meanError, (np.prod(self.outputShape),),
                         (batchSize, np.prod(self.outputShape), self.e2, self.E))
+    def save(self, name):
+        import os
+        os.mkdir('models')
+        pickle.dump((self.loss, 
+                    [layer.pack() for layer in self.layers]), 
+            open('models/'+name+'.pkl', 'wb'))
     
+    def load(name):
+        loss, layers = pickle.load()
+        model = NeuralNetwork([layer[0].unpack(*layer[1]) for layer in layers])
+        model.loss = loss
+        return model
+
     def predict(self, x):
         ym1 = x
         for layer in self.layers:
@@ -73,37 +87,11 @@ class NeuralNetwork:
                 self.gradientDescent(x_train[batch], y_train[batch], lrate)
                 plotfunc(self)
     
-    def testGrads(self, X, Y, step = 0.1):
-        self.gradientDescent(X, Y, 0)
-        dw = []
-        db = []
-        l = self.getLoss()
-        for layer in self.layers:
-            dw.append([])
-            db.append([])
-            from Dense import Reshape
-            if isinstance(layer,Reshape):
-                continue
-            w = layer.w.get().flatten()
-            for i in range(w.size):
-                w0 = w[i]
-                w[i] = w0 + step
-                layer.w.set(w)
-                self.gradientDescent(X,Y,lrate = 0)
-                dw[-1].append((self.getLoss()-l)/step)
-                w[i] = w0
-                layer.w.set(w)
-            b = layer.b.get().flatten()
-            for i in range(b.size):
-                b0 = b[i]
-                b[i] = b0 + step
-                layer.b.set(b)
-                self.gradientDescent(X,Y,lrate = 0)
-                db[-1].append((self.getLoss()-l)/step)
-                b[i] = b0
-                layer.b.set(b)
-        return dw,db
+    def __str__(self) -> str:
 
+        str = f'\t\t MODEL SUMMARY: \nInput: \t\t {self.inputShape}'
+        for layer in self.ayers:
+            str += layer.__str__()
 
 sigmoid = lambda x: x.sigmoid
 
