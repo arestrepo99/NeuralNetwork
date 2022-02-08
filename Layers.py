@@ -1,7 +1,7 @@
 import numpy as np
 from Tensor import Tensor
 from Kernel import Kernel
-from settings import densecl, convolutionalcl, activationscl
+from settings import densecl, convolutionalcl, activationscl, poolcl
 
 class sigmoid:
     kernel = activationscl.sigmoid
@@ -86,7 +86,22 @@ class Dense(Layer):
         initiateParams = self.outputShape,self.activation,self.inputShape, self.w.get(), self.b.get()
         return (self.__class__, initiateParams)
 
-        
+class Pool(Layer):      
+    def __init__(self, pool_size = (2,2), strides = (2,2), inputShape = None):
+        self.pool_size = pool_size
+        self.strides = tuple(np.int32(i) for i in strides)
+        if inputShape is not None:
+            self.initiateInput(inputShape)
+        else:
+            self.inputShape = None
+    def initiateInput(self, inputShape):
+        self.outputShape = (*tuple((size+2-self.pool_size[dim])//self.strides[dim] + 1
+                        for dim,size in enumerate(inputShape[:2])),inputShape[2])
+    
+    def allocateMemory(self,batchSize):
+        self.y = Tensor((self.batchSize,*self.outputShape))
+
+        self.pool
 
 class Conv(Layer):
     def __init__(self, kernel, filters, padding, strides, activation, inputShape =  None):

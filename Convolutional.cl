@@ -19,7 +19,7 @@ kernel void forwardPropagate(global float *ym1,
     int out1 = get_global_id(2)%outSize1;
     int out2 = get_global_id(2)/outSize1;
     
-    int wind = filter*kernel1*kernel2*inSize3;
+    int indw = filter*kernel1*kernel2*inSize3;
     
     int indOut = batch       *filters*outSize2*outSize1 + 
                 out1     *filters*outSize2 + 
@@ -28,25 +28,25 @@ kernel void forwardPropagate(global float *ym1,
 
     const int in1 = out1*stride1-padding;
     const int in2 = out2*stride2-padding;
+
     int indIn = batch               *inSize3*inSize2*inSize1 + 
                 in1                 *inSize3*inSize2 +
                 in2                 *inSize3;
     
+    int indIn1; int indIn2; int indw1; int indw2;
     const int K1_LIMIT = min(kernel1,inSize1-in1);
     const int K2_LIMIT = min(kernel2,inSize2-in2);
     v[indOut] = b[filter];
     for(int k1 = max(0,-in1); k1<K1_LIMIT; k1++){
+        indIn1 = k1 *inSize3*inSize2;
+        indw1 = k1 *kernel2*inSize3;
         for(int k2 = max(0,-in2); k2<K2_LIMIT; k2++){
             for(int dim = 0; dim<inSize3; dim++){
+                indIn2 =  k2 *inSize3;
+                indw2 = k2 *inSize3;
+
                 v[indOut] += 
-                ym1[indIn + 
-                    k1 *inSize3*inSize2 + 
-                    k2 *inSize3 + 
-                    dim] *
-                w[wind + 
-                    k1 *kernel2*inSize3 + 
-                    k2 *inSize3 + 
-                    dim];
+                ym1[indIn + indIn1 + indIn2 + dim] * w[indw + indw1+ indw2 + dim];
             }
         }
     }
@@ -65,11 +65,13 @@ kernel void computedb(global float *sigma,
     uint ind = batch*filters+filter;
     uint indOut = batch*filters*outSize1*outSize2+filter;
     db[ind] = 0;
-    uint ind2;
-    for(uint o1 = 0; o1<outSize1; o1++){
-        for(uint o2 = 0; o2<outSize2; o2++){
-            ind2 = o1*outSize2*filters +  o2*filters;
-            db[ind] += sigma[indOut+ind2]*dphi[indOut+ind2];
+    uint indOut1;
+    uint indOut2;
+    for(uint out1 = 0; out1<outSize1; out1++){
+        indOut1 = out1*outSize2*filters;
+        for(uint out2 = 0; out2<outSize2; out2++){
+            indOut2 = out2*filters;
+            db[ind] += sigma[indOut+indOut1+indOut2]*dphi[indOut+indOut1+indOut2];
         }
     }
 }
