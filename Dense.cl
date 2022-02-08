@@ -21,8 +21,7 @@ kernel void computeError(global float *Y,
                              global float *e,
                              global float *y){
     uint ind = get_global_id(0);
-    e[ind] = -(Y[ind]-y[ind]); //multiplied by -1 to substitute sigma
-    //db[ind]= -e[ind]*dphi[ind];
+    e[ind] = -(Y[ind]-y[ind])/2;
 }
 
 kernel void computedb(global float *sigma,
@@ -108,5 +107,5 @@ kernel void meanError(const int batchSize,
     for(int batch=0; batch<batchSize; batch++){
         E[ind] += e2[batch*outSize + ind];
     }
-    E[ind] = E[ind]/batchSize;
+    E[ind] = E[ind]/batchSize*outSize;
 }

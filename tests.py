@@ -1,8 +1,8 @@
 # Testing kernels
+from ast import Slice
 import numpy as np
-from NeuralNetwork import NeuralNetwork, sigmoid
-from Layers import Dense, Reshape
-from Conv import Conv
+from NeuralNetwork import NeuralNetwork
+from Layers import Dense, Reshape, Conv, sigmoid
 from Tensor import Tensor
 from Kernel import Kernel
 from itertools import product
@@ -10,7 +10,6 @@ from inspect import signature
 from sklearn.linear_model import LinearRegression
 
 from testsConv import forwardPropagate
-
 
 TOLERANCE = 1e-4
 
@@ -39,16 +38,45 @@ class bcolors:
     Passed = OKGREEN + "PASSED" + ENDC
     Failed = FAIL + "FAILED" + ENDC
 
+class TestArray():
+    def __init__(self, array):
+        self.array = array
+        self.shape = array.shape
+        self.accessed = np.zeros(array.shape).astype(bool) 
+
+    def __getitem__(self, index: tuple):
+        for i,ind in enumerate(index):
+            if not (ind >= 0):
+                print(index)
+            assert ind >= 0, f'dim {i}'
+            assert ind < self.array.shape[i], f'dim {i}'
+        self.accessed[index] = True
+        return self.array[index]
+    
+    def __setitem__(self, index: tuple, newvalue):
+        for i,ind in enumerate(index):
+            assert ind >= 0, f'dim {i}'
+            assert ind < self.array.shape[i], f'dim {i}'
+        self.accessed[index] = True
+        self.array[index] = newvalue
+    
+    def assertAccessed(self,paramname):
+        if not self.accessed.all():
+            print(f'Warning: Not all of {paramname} accesed')
+            return True
+        return False
+
+
 def test(kernel: Kernel, function, args): 
     params = []
     for param in list(args)+list(kernel.staticParams):
         if isinstance(param,Tensor):
-            params.append(param.get())
+            params.append(TestArray(param.get()))
         else:
             params.append(param)
     # Running in CPU
     for globalIndex in product(*(list(range(i)) for i in kernel.globalSize)):
-        function(globalIndex,*params)
+        output = function(globalIndex,*params)
     # Running in GPU
     output = kernel(*args)
 
@@ -58,20 +86,22 @@ def test(kernel: Kernel, function, args):
     #Compare outputs to determine if test was passed or failed
     passed = True
     message = ""
-    differingParams = {}
+    debugOutput = {}
     for ind,param in enumerate(args+kernel.staticParams):
         if isinstance(param,Tensor):
             param = param.get()
-        if abs(np.sum(params[ind]-param)) > TOLERANCE:
-            message += f'Param Index {ind} with name "{paramNames[ind]}" was off by {abs(np.sum(params[ind]-param))}\n'
-            passed = False
-            differingParams[paramNames[ind]] = (params[ind],param)
+            if params[ind].assertAccessed(paramNames[ind]):
+                debugOutput["na"+paramNames[ind]] = params[ind].accessed
+            if abs(np.sum(params[ind].array-param)) > TOLERANCE:
+                message += f'Param Index {ind} with name "{paramNames[ind]}" was off by {abs(np.sum(params[ind].array-param))}\n'
+                passed = False
+                debugOutput["d"+paramNames[ind]] = params[ind].array-param
     if passed:
         print(f'{bcolors.Passed} {function.__name__}')
     else:
         print(f'{bcolors.Failed} {function.__name__}')
         print(message)
-    return output
+    return output,debugOutput
 
 
 def getRandomData(model: NeuralNetwork, batchSize):
@@ -127,7 +157,12 @@ def gradientTest(model: NeuralNetwork, step = 0.1):
             else:
                 message = bcolors.Failed
             print(f'{message} Layer {ind} {paramName} r2= {r2}, m= {m}, b= {b},')
-    return dw,db
+    def plotter(ind):
+        import matplotlib.pyplot as plt
+        plt.scatter(model.layers[ind].dw.get().flatten(),dw[ind])
+        plt.scatter(model.layers[ind].db.get().flatten(),db[ind])
+    
+    return dw,db,plotter
         
 def testModel(model):
     dw,db = gradientTest(model)

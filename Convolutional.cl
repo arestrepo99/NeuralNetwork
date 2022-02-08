@@ -1,41 +1,52 @@
 kernel void forwardPropagate(global float *ym1,
-                             const uint outSize1,
-                             const uint outSize2,
-                             const uint filters,
-                             const uint stride1,
-                             const uint stride2,
-                             const uint kernel1,
-                             const uint kernel2,
-                             const uint inSize1,
-                             const uint inSize2,
-                             const uint inSize3,
+                             const int outSize1,
+                             const int outSize2,
+                             const int filters,
+                             const int stride1,
+                             const int stride2,
+                             const int kernel1,
+                             const int kernel2,
+                             const int inSize1,
+                             const int inSize2,
+                             const int inSize3,
+                             const int padding,
                              global float *v,
                              global float *w,
                              global float *b){
 
-    uint batch = get_global_id(0);
-    uint filter = get_global_id(1);
-    uint output1 = get_global_id(2)%outSize1;
-    uint output2 = get_global_id(2)/outSize1;
+    int batch = get_global_id(0);
+    int filter = get_global_id(1);
+    int out1 = get_global_id(2)%outSize1;
+    int out2 = get_global_id(2)/outSize1;
     
-    uint wind = filter*kernel1*kernel2*inSize3;
+    int wind = filter*kernel1*kernel2*inSize3;
     
-    uint indOut = batch       *filters*outSize2*outSize1 + 
-                output1     *filters*outSize2 + 
-                output2     *filters + 
+    int indOut = batch       *filters*outSize2*outSize1 + 
+                out1     *filters*outSize2 + 
+                out2     *filters + 
                 filter      ;
-    uint indIn = batch               *inSize3*inSize2*inSize1 + 
-                output1*stride1     *inSize3*inSize2 +
-                output2*stride2     *inSize3;
-    
-    v[indOut] = b[filter];
-    for(uint k1 = 0; k1<kernel1; k1++){
-        for(uint k2 = 0; k2<kernel2; k2++){
-            for(uint dim = 0; dim<inSize3; dim++){
-                v[indOut] += 
-                ym1[indIn + k1*inSize3*inSize2 + k2 *inSize3 + dim] *
-                w[wind + k1*kernel2*inSize3 + k2 * inSize3 + dim];
 
+    const int in1 = out1*stride1-padding;
+    const int in2 = out2*stride2-padding;
+    int indIn = batch               *inSize3*inSize2*inSize1 + 
+                in1                 *inSize3*inSize2 +
+                in2                 *inSize3;
+    
+    const int K1_LIMIT = min(kernel1,inSize1-in1);
+    const int K2_LIMIT = min(kernel2,inSize2-in2);
+    v[indOut] = b[filter];
+    for(int k1 = max(0,-in1); k1<K1_LIMIT; k1++){
+        for(int k2 = max(0,-in2); k2<K2_LIMIT; k2++){
+            for(int dim = 0; dim<inSize3; dim++){
+                v[indOut] += 
+                ym1[indIn + 
+                    k1 *inSize3*inSize2 + 
+                    k2 *inSize3 + 
+                    dim] *
+                w[wind + 
+                    k1 *kernel2*inSize3 + 
+                    k2 *inSize3 + 
+                    dim];
             }
         }
     }
@@ -65,99 +76,110 @@ kernel void computedb(global float *sigma,
 
 kernel void computeGradients(global float * ym1,
                         global float *sigma,
-                        const uint outSize1,
-                        const uint outSize2,
-                        const uint filters,
-                        const uint inSize1,
-                        const uint inSize2,
-                        const uint inSize3,
-                        const uint kernel1,
-                        const uint kernel2,
-                        const uint stride1,
-                        const uint stride2,
+                        const int outSize1,
+                        const int outSize2,
+                        const int filters,
+                        const int inSize1,
+                        const int inSize2,
+                        const int inSize3,
+                        const int kernel1,
+                        const int kernel2,
+                        const int stride1,
+                        const int stride2,
+                        const int padding,
                         global float *dw,
                         global float *dphi
                         ){
-    uint batch = get_global_id(0)/filters;
-    uint filter = get_global_id(0)%filters;
-    uint k1 = get_global_id(1)/kernel2;
-    uint k2 = get_global_id(1)%kernel2;
-    uint dim = get_global_id(2);
+    int batch = get_global_id(0)/filters;
+    int filter = get_global_id(0)%filters;
+    int k1 = get_global_id(1)/kernel2;
+    int k2 = get_global_id(1)%kernel2;
+    int dim = get_global_id(2);
     
-    uint wind = batch        *filters*kernel1*kernel2*inSize3 +
-                 filter       *kernel1*kernel2*inSize3 +
+    const int IN1_LIMIT_INF = max(0,k1-padding) +(stride1-max(0,-k1+padding))%stride1;
+    const int IN2_LIMIT_INF = max(0,k2-padding) +(stride2-max(0,-k2+padding))%stride2;
+    const int IN1_LIMIT_SUP = min(inSize1,outSize1*stride1-padding+k1);
+    const int IN2_LIMIT_SUP = min(inSize2,outSize2*stride2-padding+k2);
+
+    int wind = batch         *filters*kernel1*kernel2*inSize3 +
+                 filter      *kernel1*kernel2*inSize3 +
                  k1          *kernel2*inSize3 +
                  k2          *inSize3 + 
                  dim;
 
-    uint indIn = batch               *inSize3*inSize2*inSize1 + 
-                 k1                  *inSize3*inSize2 + 
-                 k2                  *inSize3+
+    int indIn = batch        *inSize3*inSize2*inSize1 + 
                  dim;  
 
-    uint indOut = batch       *filters*outSize2*outSize1 + 
-                 filter      ;
-    uint indIn2;
-    uint indOut2;
+    int indOut = batch       *filters*outSize2*outSize1 + 
+                 filter;
 
+    int indIn1;
+    int indIn2;
+    int indOut1;
+    int indOut2;
     dw[wind] = 0;
-    for(uint output1 = 0; output1<outSize1; output1++){
-        for(uint output2 = 0; output2<outSize2; output2++){
-                indIn2 = output1*stride1     *inSize3*inSize2 +
-                    output2*stride2     *inSize3 ;
-                indOut2 = output1     *filters*outSize2 + 
-                    output2     *filters;
-                dw[wind] += ym1[indIn+indIn2]*sigma[indOut+indOut2]*dphi[indOut+indOut2];
+    for(int in1 = IN1_LIMIT_INF; in1<IN1_LIMIT_SUP; in1+=stride1){
+        indIn1 =  in1 * inSize3*inSize2;
+        indOut1 = (in1-k1+padding)/stride1 * filters*outSize2;
+        for(int in2 = IN2_LIMIT_INF; in2<IN2_LIMIT_SUP; in2+=stride2){
+            indIn2 = in2 *inSize3;
+            indOut2 = (in2-k2+padding)/stride2 * filters;
+            dw[wind] += ym1[indIn+indIn1+indIn2]*
+                sigma[indOut+indOut1+indOut2]*
+                dphi[indOut+indOut1+indOut2];
         }
     } 
 }
 
 kernel void computeLocalGradient(global float *sigmaOut,
-                            const uint outSize1,
-                            const uint outSize2,
-                            const uint filters,
-                            const uint inSize1,
-                            const uint inSize2,
-                            const uint inSize3,
-                            const uint kernel1,
-                            const uint kernel2,
-                            const uint stride1,
-                            const uint stride2,
+                            const int outSize1,
+                            const int outSize2,
+                            const int filters,
+                            const int inSize1,
+                            const int inSize2,
+                            const int inSize3,
+                            const int kernel1,
+                            const int kernel2,
+                            const int stride1,
+                            const int stride2,
+                            const int padding,
                             global float *sigmaIn,
                             global float *dphi,
                             global float *w){
                                 
-    uint batch = get_global_id(0);
-    uint in1 = get_global_id(1)/inSize2;
-    uint in2 = get_global_id(1)%inSize2;
-    uint in3 = get_global_id(2);
+    int batch = get_global_id(0);
+    int in1 = get_global_id(1)/inSize2;
+    int in2 = get_global_id(1)%inSize2;
+    int in3 = get_global_id(2);
   
-    uint indIn = batch               *inSize3*inSize2*inSize1 + 
+    const int K1_LIMIT_INF = max(0,in1-outSize1*stride1+padding+1)+in1%stride1;
+    const int K2_LIMIT_INF = max(0,in2-outSize2*stride2+padding+1)+in2%stride2;
+    const int K1_LIMIT_SUP = min(kernel1,in1+padding+1);
+    const int K2_LIMIT_SUP = min(kernel2,in2+padding+1);
+
+    int indIn = batch               *inSize3*inSize2*inSize1 + 
                  in1                  *inSize3*inSize2 + 
                  in2                  *inSize3+
                  in3;  
     
-    uint indOut = batch         *filters*outSize2*outSize1;
-    uint indOut2;
+    int indOut = batch         *filters*outSize2*outSize1;
+    int indOut1;
+    int indOut2;
+    
     
     sigmaIn[indIn] = 0;
-    for(uint k1 =in1%stride1; k1<kernel1; k1+=stride1){
-        if ( in1>=k1 && in1+kernel1<k1+inSize1+1){ 
-            for(uint k2 =in2%stride2; k2<kernel2; k2+=stride2){
-                if(in2>=k2 && in2+kernel2<k2+inSize2+1) {
-                    for(uint out3 = 0; out3<filters; out3++){
-                        indOut2 =
-                        (in1-k1)/stride1    *filters*outSize2 + 
-                        (in2-k2)/stride2    *filters + 
-                        out3;
-                        sigmaIn[indIn] += 
-                            w[ out3             *kernel1*kernel2*inSize3 +
-                                k1     *kernel2*inSize3 +
-                                k2     *inSize3 +
-                                in3] *
-                        sigmaOut[indOut+indOut2]*dphi[indOut+indOut2]; 
-                    }
-                }                
+    for(int k1 = K1_LIMIT_INF; k1<K1_LIMIT_SUP; k1+=stride1){
+        indOut1 = (in1+padding-k1)/stride1    *filters*outSize2;
+        for(int k2 =K2_LIMIT_INF; k2<K2_LIMIT_SUP; k2+=stride2){
+            indOut2 = (in2+padding-k2)/stride2    *filters;
+            for(int indOut3 = 0; indOut3<filters; indOut3++){
+                sigmaIn[indIn] += 
+                    w[ indOut3      *kernel1*kernel2*inSize3 +
+                        k1          *kernel2*inSize3 +
+                        k2          *inSize3 +
+                        in3] *
+                    sigmaOut[indOut+indOut1+indOut2+indOut3]*
+                    dphi[indOut+indOut1+indOut2+indOut3];         
             }
         }
     }

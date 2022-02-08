@@ -28,6 +28,7 @@ class NeuralNetwork:
         self.inputShape = layers[0].inputShape
         self.outputShape = layers[-1].outputShape
         self.loss = []
+
     def getLoss(self,Y):
             self.computeError(Y, self.e)
             self.squareError()
@@ -50,6 +51,7 @@ class NeuralNetwork:
                         (self.e, self.e2))
         self.meanError = Kernel(densecl.meanError, (np.prod(self.outputShape),),
                         (batchSize, np.prod(self.outputShape), self.e2, self.E))
+
     def save(self, name):
         import os
         if not os.path.isdir('models'):
@@ -79,7 +81,6 @@ class NeuralNetwork:
         sigma = self.e
         for layer in self.layers[::-1]:
             sigma = layer.backwardPropagate(sigma,lrate)
-            
     
     def train(self, x_train, y_train, epochs, lrate, plotfunc):
         numBatches, batchSize = x_train.shape[:2]
@@ -90,12 +91,14 @@ class NeuralNetwork:
             for batch in batches:
                 self.gradientDescent(x_train[batch], y_train[batch], lrate)
                 plotfunc(self)
-    
+
+    def __repr__(self) -> str:
+        return self.__str__()
 
     def __str__(self) -> str:
-
-        str = f'\t\t MODEL SUMMARY: \nInput: \t\t {self.inputShape}'
-        for layer in self.ayers:
+        str = f'\t\t MODEL SUMMARY: \nInput: \t\t {self.inputShape}\n'
+        for layer in self.layers:
             str += layer.__str__()
+        return str
 
 #https://learnopencv.com/number-of-parameters-and-tensor-sizes-in-convolutional-neural-network/

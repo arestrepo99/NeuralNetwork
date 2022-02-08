@@ -8,10 +8,11 @@ class sigmoid:
 
 
 class Layer:
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __str__(self) -> str:
-        return f'{self.__name__} Layer: \t\t{self.outputShape}'
-
-
+        return f'{self.__class__.__name__} Layer: \t\t{self.outputShape}\n'
 
 class Dense(Layer):
     def __init__(self, outputShape, activation, inputShape = None ):
@@ -91,7 +92,7 @@ class Conv(Layer):
     def __init__(self, kernel, filters, padding, strides, activation, inputShape =  None):
         self.kernel = np.int32(kernel)
         self.filters = np.int32(filters)
-        self.padding = 0#np.int32(padding)
+        self.padding = np.int32(padding)
         self.activation = activation
         self.strides = tuple(np.int32(i) for i in strides)
         if inputShape is not None:
@@ -123,7 +124,7 @@ class Conv(Layer):
         self.GPUForwardPropagate = Kernel(convolutionalcl.forwardPropagate,
             (batchSize, self.filters, np.prod(self.outputShape[:2])),
             (*self.outputShape[:2], self.filters,
-             *self.strides, *self.kernel, *self.inputShape,
+             *self.strides, *self.kernel, *self.inputShape, self.padding,
              self.v, self.w, self.b))
         self.activate = Kernel(self.activation.kernel, 
              (np.prod((batchSize,*self.outputShape)),),
@@ -133,11 +134,11 @@ class Conv(Layer):
              (*self.outputShape,self.dphi,self.db))
         self.computeGradients = Kernel(convolutionalcl.computeGradients, 
              (batchSize*self.filters,np.prod(self.kernel),self.inputShape[2]),
-             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
+             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides, self.padding,
              self.dw,self.dphi))
         self.computeLocalGradient = Kernel(convolutionalcl.computeLocalGradient, 
             (batchSize, np.prod(self.inputShape[:2]), self.inputShape[2]),
-            (*self.outputShape,*self.inputShape,*self.kernel, *self.strides,
+            (*self.outputShape,*self.inputShape,*self.kernel, *self.strides, self.padding,
             self.sigma, self.dphi, self.w))
         self.learningRule = Kernel(convolutionalcl.learningRule, 
             (np.prod(self.w.shape),),
@@ -209,3 +210,5 @@ class Reshape(Layer):
     def pack(self):
         initiateParams = self.outputShape, self.inputShape
         return (self.__class__, initiateParams)
+
+#https://learnopencv.com/number-of-parameters-and-tensor-sizes-in-convolutional-neural-network/
