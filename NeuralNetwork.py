@@ -33,7 +33,7 @@ class NeuralNetwork:
             self.computeError(Y, self.e)
             self.squareError()
             self.meanError()
-            return(self.E.get().mean())
+            return(self.E.get().mean()/np.prod(self.outputShape))
 
     def allocateMemory(self, batchSize):
         self.batchSize = np.int32(batchSize)
@@ -51,6 +51,7 @@ class NeuralNetwork:
                         (self.e, self.e2))
         self.meanError = Kernel(densecl.meanError, (np.prod(self.outputShape),),
                         (batchSize, np.prod(self.outputShape), self.e2, self.E))
+
 
     def save(self, name):
         import os

@@ -1,13 +1,18 @@
 import numpy as np
 import pyopencl as cl
 from Tensor import Tensor
-
-from settings import queue
+from functools import reduce
+from settings import queue, kerneloptimization
+from time import time
+from itertools import product
 
 class InvalidGlobalSize(Exception):
     pass
 class InvalidParameters(Exception):
     pass
+
+def factors(n):    
+    return set(reduce(list.__add__,([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0))) | {n}
 
 class Kernel():
     def __init__(self, function, globalSize, staticParams):
@@ -36,5 +41,21 @@ class Kernel():
         self.function(queue, self.globalSize, self.localSize, 
                 *getBuffers(params), *getBuffers(self.staticParams))
 
-    def optimize(self, params, reps = 2, debug = True):        
-        self.localSize = tuple([1]*len(self.globalSize))
+
+    def optimize(self, params, reps = 3):   
+        if kerneloptimization:
+            run_time = {}
+            for size in product(*[factors(size) for size in self.globalSize]):
+                self.localSize = size
+                try:
+                    start_time = time()
+                    for _ in range(reps):
+                        self(*params)
+                        queue.finish()
+                    run_time[size] = time()-start_time
+                except cl.LogicError as e:
+                    continue
+            self.localSize = min(run_time, key=run_time.get)
+            self.time = run_time[self.localSize]
+        else:
+            self.localSize = tuple([1]*len(self.globalSize))

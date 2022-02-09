@@ -9,8 +9,6 @@ from itertools import product
 from inspect import signature
 from sklearn.linear_model import LinearRegression
 
-from testsConv import forwardPropagate
-
 TOLERANCE = 1e-4
 
 def parse(kernelFuncion):
@@ -152,7 +150,7 @@ def gradientTest(model: NeuralNetwork, step = 0.1):
             b = round(reg.intercept_,PRESITION)
             r2 = round(reg.score(x,y),PRESITION)
             paramName = ['dw','db'][paramInd]
-            if abs(r2-1) < TOLERANCE:
+            if abs(r2-1) < 0.05:
                 message = bcolors.Passed
             else:
                 message = bcolors.Failed
@@ -163,13 +161,5 @@ def gradientTest(model: NeuralNetwork, step = 0.1):
         plt.scatter(model.layers[ind].db.get().flatten(),db[ind])
     
     return dw,db,plotter
-        
-def testModel(model):
-    dw,db = gradientTest(model)
-    X,Y = getRandomData(model,10)
-    ym1 = X
-    for layer in model.layers:
-        ym1 = test(layer.forwardPropagate(ym1), forwardPropagate, ym1)
-    model.ypred = ym1
-    test(model.computeError,computeError,)
+
 
