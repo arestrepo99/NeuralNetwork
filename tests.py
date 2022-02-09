@@ -64,19 +64,27 @@ class TestArray():
             return True
         return False
 
-
-def test(kernel: Kernel, function, args): 
-    params = []
+def runCPUKernel(function, kernel, args, ind = None):
+    testArrayParameters = []
+    # Changing tensors to test array
     for param in list(args)+list(kernel.staticParams):
         if isinstance(param,Tensor):
-            params.append(TestArray(param.get()))
+            testArrayParameters.append(TestArray(param.get()))
         else:
-            params.append(param)
-    # Running in CPU
-    for globalIndex in product(*(list(range(i)) for i in kernel.globalSize)):
-        output = function(globalIndex,*params)
-    # Running in GPU
-    output = kernel(*args)
+            testArrayParameters.append(param)
+    if ind is None:
+        # Running in CPU
+        for globalIndex in product(*(list(range(i)) for i in kernel.globalSize)):
+            function(globalIndex,*testArrayParameters)
+    else:
+        function(ind,*testArrayParameters)
+    return testArrayParameters
+
+def testKernel(kernel: Kernel, function, args):
+    # Running CPU Kernel
+    testArrayParameters = runCPUKernel(function, kernel, args)
+    # Running GPU Kernel
+    kernel(*args)
 
     #Getting Param Names 
     paramNames = str(signature(function))[1:-1].split(', ')[1:]
@@ -88,19 +96,33 @@ def test(kernel: Kernel, function, args):
     for ind,param in enumerate(args+kernel.staticParams):
         if isinstance(param,Tensor):
             param = param.get()
-            if params[ind].assertAccessed(paramNames[ind]):
-                debugOutput["na"+paramNames[ind]] = params[ind].accessed
-            if abs(np.sum(params[ind].array-param)) > TOLERANCE:
-                message += f'Param Index {ind} with name "{paramNames[ind]}" was off by {abs(np.sum(params[ind].array-param))}\n'
+            #Debugging 
+            if testArrayParameters[ind].assertAccessed(paramNames[ind]):
+                debugOutput["na"+paramNames[ind]] = testArrayParameters[ind].accessed
+            # Testing the answer is the same
+            if abs(np.sum(testArrayParameters[ind].array-param)) > TOLERANCE:
+                message += f'Param Index {ind} with name "{paramNames[ind]}" was off by {abs(np.sum(testArrayParameters[ind].array-param))}\n'
                 passed = False
-                debugOutput["d"+paramNames[ind]] = params[ind].array-param
+                debugOutput["d"+paramNames[ind]] = testArrayParameters[ind].array-param
     if passed:
         print(f'{bcolors.Passed} {function.__name__}')
     else:
         print(f'{bcolors.Failed} {function.__name__}')
         print(message)
-    return output,debugOutput
+    return debugOutput
 
+
+import LayerTests.Convolutional as convTest
+def testConv(conv):
+    ym1 = Tensor(np.random.randn(conv.batchSize,*conv.inputShape))
+    sigmaOut = Tensor(np.random.randn(conv.batchSize,*conv.outputShape))
+
+    testKernel(conv.GPUForwardPropagate,convTest.forwardPropagate,(ym1,))
+    testKernel(conv.activate,convTest.sigmoidTest,tuple())
+    testKernel(conv.computedb,convTest.computedb,(sigmaOut,))
+    testKernel(conv.computeGradients,convTest.computeGradients,(ym1,sigmaOut))
+    testKernel(conv.computeLocalGradient,convTest.computeLocalGradient,(sigmaOut,))
+    testKernel(conv.learningRule,convTest.learningRule,(np.float32(1),))
 
 def getRandomData(model: NeuralNetwork, batchSize):
     model.allocateMemory(batchSize)

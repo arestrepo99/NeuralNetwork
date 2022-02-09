@@ -135,6 +135,11 @@ def computeLocalGradient(globalIndex,
     K1_LIMIT_SUP = min(kernel1,in1+padding+1)
     K2_LIMIT_SUP = min(kernel2,in2+padding+1)
 
+    sigmaIn.outInd1 = np.zeros(sigmaIn.array.shape)
+    sigmaIn.outInd2 = np.zeros(sigmaIn.array.shape)
+    sigmaOut.outInd1 = np.zeros(sigmaIn.array.shape)
+    sigmaOut.outInd2 = np.zeros(sigmaIn.array.shape)
+
     sigmaIn[batch,in1,in2,in3] = 0
     for k1 in range(K1_LIMIT_INF,K1_LIMIT_SUP,stride1):
         for k2 in range(K2_LIMIT_INF,K2_LIMIT_SUP,stride2):
