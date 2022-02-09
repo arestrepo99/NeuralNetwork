@@ -37,26 +37,30 @@ class bcolors:
     Failed = FAIL + "FAILED" + ENDC
 
 class TestArray():
-    def __init__(self, array):
+    def __init__(self, array, cond = lambda in1,in2,out3,out4: True):
         self.array = array
         self.shape = array.shape
-        self.accessed = np.zeros(array.shape).astype(bool) 
+        self.indexes = np.zeros(array.shape,4).astype(bool)
+        self.index = (0,0,0,0)
+        self.cond = cond
 
     def __getitem__(self, index: tuple):
-        for i,ind in enumerate(index):
-            if not (ind >= 0):
-                print(index)
-            assert ind >= 0, f'dim {i}'
-            assert ind < self.array.shape[i], f'dim {i}'
-        self.accessed[index] = True
-        return self.array[index]
+        if self.cond(*self.index):
+            for i,ind in enumerate(index):
+                if not (ind >= 0):
+                    print(index)
+                assert ind >= 0, f'dim {i}'
+                assert ind < self.array.shape[i], f'dim {i}'
+            self.indexes[index] = self.index
+            return self.array[index]
     
     def __setitem__(self, index: tuple, newvalue):
-        for i,ind in enumerate(index):
-            assert ind >= 0, f'dim {i}'
-            assert ind < self.array.shape[i], f'dim {i}'
-        self.accessed[index] = True
-        self.array[index] = newvalue
+        if self.cond(*self.index):
+            for i,ind in enumerate(index):
+                assert ind >= 0, f'dim {i}'
+                assert ind < self.array.shape[i], f'dim {i}'
+            self.indexes[index] = self.index
+            self.array[index] = newvalue
     
     def assertAccessed(self,paramname):
         if not self.accessed.all():
@@ -64,25 +68,25 @@ class TestArray():
             return True
         return False
 
-def runCPUKernel(function, kernel, args, ind = None):
+def runCPUKernel(function, globalSize, kernelArgs, ind = None):
     testArrayParameters = []
     # Changing tensors to test array
-    for param in list(args)+list(kernel.staticParams):
+    for param in kernelArgs:
         if isinstance(param,Tensor):
             testArrayParameters.append(TestArray(param.get()))
         else:
             testArrayParameters.append(param)
     if ind is None:
         # Running in CPU
-        for globalIndex in product(*(list(range(i)) for i in kernel.globalSize)):
+        for globalIndex in product(*(list(range(i)) for i in globalSize)):
             function(globalIndex,*testArrayParameters)
     else:
         function(ind,*testArrayParameters)
     return testArrayParameters
 
-def testKernel(kernel: Kernel, function, args):
+def CPUvsGPUtest(kernel: Kernel, function, args):
     # Running CPU Kernel
-    testArrayParameters = runCPUKernel(function, kernel, args)
+    testArrayParameters = runCPUKernel(function, kernel.globalSize, list(args)+list(kernel.staticParams), args)
     # Running GPU Kernel
     kernel(*args)
 
@@ -116,13 +120,17 @@ import LayerTests.Convolutional as convTest
 def testConv(conv):
     ym1 = Tensor(np.random.randn(conv.batchSize,*conv.inputShape))
     sigmaOut = Tensor(np.random.randn(conv.batchSize,*conv.outputShape))
+    CPUvsGPUtest(conv.GPUForwardPropagate,convTest.forwardPropagate,(ym1,))
+    CPUvsGPUtest(conv.activate,convTest.sigmoidTest,tuple())
+    CPUvsGPUtest(conv.computedb,convTest.computedb,(sigmaOut,))
+    CPUvsGPUtest(conv.computeGradients,convTest.computeGradients,(ym1,sigmaOut))
+    CPUvsGPUtest(conv.computeLocalGradient,convTest.computeLocalGradient,(sigmaOut,))
+    CPUvsGPUtest(conv.learningRule,convTest.learningRule,(np.float32(1),))
 
-    testKernel(conv.GPUForwardPropagate,convTest.forwardPropagate,(ym1,))
-    testKernel(conv.activate,convTest.sigmoidTest,tuple())
-    testKernel(conv.computedb,convTest.computedb,(sigmaOut,))
-    testKernel(conv.computeGradients,convTest.computeGradients,(ym1,sigmaOut))
-    testKernel(conv.computeLocalGradient,convTest.computeLocalGradient,(sigmaOut,))
-    testKernel(conv.learningRule,convTest.learningRule,(np.float32(1),))
+
+def CPUAnaliticalTest():
+
+
 
 def getRandomData(model: NeuralNetwork, batchSize):
     model.allocateMemory(batchSize)

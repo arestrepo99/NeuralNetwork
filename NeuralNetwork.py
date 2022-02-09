@@ -21,7 +21,8 @@ class NeuralNetwork:
         for ind in range(1,len(self.layers)):
             if self.layers[ind].inputShape is None:
                 self.layers[ind].initiateInput(self.layers[ind-1].outputShape)
-
+                self.layers[ind-1].simgaOut = self.layers[ind].sigma
+                self.layers[ind].ym1 = self.layers[ind-1].y
             if not self.layers[ind].inputShape == self.layers[ind-1].outputShape:
                 err = f'Dimensions {self.layers[ind].inputShape} and {self.layers[ind-1].outputShape} dont match.'
                 raise MismatchedDimension(err)

@@ -30,7 +30,6 @@ def forwardPropagate(globalIndex,
     K1_LIMIT_SUP = min(kernel1,inSize1-in1)
     K2_LIMIT_SUP = min(kernel2,inSize2-in2)
 
-    dict1 = {}
     v[batch,out1,out2,filter] = b[filter,]
     for k1 in range(K1_LIMIT_INF, K1_LIMIT_SUP):
         for k2 in range(K2_LIMIT_INF, K2_LIMIT_SUP):
@@ -40,7 +39,6 @@ def forwardPropagate(globalIndex,
                 v[batch,out1,out2,filter] += \
                 ym1[batch,in1,in2,dim] * \
                 w[filter, k1, k2,dim]
-                dict1[in1,in2] = out1,out2
 
 #k1 goes form  max(0,-in1) to  min(kernel1,inSize1-in1)
 
@@ -48,7 +46,7 @@ def forwardPropagate(globalIndex,
 #output1 = (input1+padding-k1)/stride1
 
 def computedb(globalIndex,
-             sigma,
+             sigmaOut,
              outSize1,
              outSize2,
              filters,
@@ -66,12 +64,12 @@ def computedb(globalIndex,
         for o2 in range(outSize2):
             indOut2 = o1*outSize2*filters +  o2*filters
             db[np.unravel_index(ind,db.shape)] += \
-                sigma[np.unravel_index(indOut+indOut2,sigma.shape)] \
+                sigmaOut[np.unravel_index(indOut+indOut2,sigmaOut.shape)] \
                 *dphi[np.unravel_index(indOut+indOut2,dphi.shape)]
 
 def computeGradients(globalIndex,
                         ym1,
-                        sigma,
+                        sigmaOut,
                         outSize1,
                         outSize2,
                         filters,
@@ -103,7 +101,7 @@ def computeGradients(globalIndex,
             out2 = (in2-k2+padding)//stride2
             dw[batch,filter,k1,k2,dim] += \
                 ym1[batch,in1,in2,dim]* \
-                sigma[batch,out1,out2,filter]* \
+                sigmaOut[batch,out1,out2,filter]* \
                 dphi[batch,out1,out2,filter]
 
 
@@ -134,11 +132,6 @@ def computeLocalGradient(globalIndex,
     K2_LIMIT_INF = max(0,in2-outSize2*stride2+padding+1)+in2%stride2
     K1_LIMIT_SUP = min(kernel1,in1+padding+1)
     K2_LIMIT_SUP = min(kernel2,in2+padding+1)
-
-    sigmaIn.outInd1 = np.zeros(sigmaIn.array.shape)
-    sigmaIn.outInd2 = np.zeros(sigmaIn.array.shape)
-    sigmaOut.outInd1 = np.zeros(sigmaIn.array.shape)
-    sigmaOut.outInd2 = np.zeros(sigmaIn.array.shape)
 
     sigmaIn[batch,in1,in2,in3] = 0
     for k1 in range(K1_LIMIT_INF,K1_LIMIT_SUP,stride1):
