@@ -1,3 +1,4 @@
+from matplotlib.container import BarContainer
 import numpy as np
 from Tensor import Tensor
 from Kernel import Kernel
@@ -17,9 +18,9 @@ class Layer:
 class Dense(Layer):
     def __init__(self, outputShape, activation, inputShape = None ):
         if isinstance(outputShape,int):
-            self.outputShape = (np.int32(outputShape),)
+            self.outputShape = (outputShape,)
         else:
-            self.outputShape = tuple(np.int32(i) for i in outputShape)
+            self.outputShape = outputShape
         self.activation = activation
         if inputShape is not None:
             self.initiateInput(inputShape)
@@ -27,14 +28,14 @@ class Dense(Layer):
             self.inputShape = None
         
     def initiateInput(self, inputShape):
-        self.inputShape = tuple(np.int32(i) for i in inputShape)
+        self.inputShape = inputShape
         self.w = Tensor(np.random.randn(*inputShape,*self.outputShape))
         self.b = Tensor(np.random.randn(*self.outputShape))
 
     def allocateMemory(self, batchSize):
         outputSize, = self.outputShape
         inputSize, = self.inputShape
-        batchSize = np.int32(batchSize)
+        batchSize = batchSize
         self.batchSize = batchSize
         self.v = Tensor((batchSize,outputSize))
         self.y = Tensor((batchSize,outputSize))
@@ -43,36 +44,45 @@ class Dense(Layer):
         self.dw = Tensor((batchSize,inputSize,outputSize))
         self.db = Tensor((batchSize,outputSize))
 
-        self.GPUForwardPropagate = Kernel(densecl.forwardPropagate,
-            (batchSize,outputSize),
-            (inputSize, outputSize, self.v, self.w, self.b))
+        Kernel(densecl.forwardPropagate, globalSize= tuple(), tensors= tuple(), constants= tuple())
+        self.GPUForwardPropagate = Kernel(densecl.forwardPropagate, 
+            globalSize= (batchSize,outputSize), 
+            tensors= (self.v, self.w, self.b), 
+            constants= (inputSize, outputSize) )
         self.activate = Kernel(self.activation.kernel, 
-            (batchSize*outputSize,),
-            (self.v, self.y, self.dphi))
+            globalSize= (batchSize*outputSize,),
+            tensors = (self.v, self.y, self.dphi),
+            constants = tuple() )
         self.computedb = Kernel(densecl.computedb, 
-            (batchSize*outputSize,),
-            (self.dphi, self.db))
+            globalSize= (batchSize*outputSize,),
+            tensors= (self.dphi, self.db),
+            constants= tuple())
         self.computeGradients = Kernel(densecl.computeGradients, 
-            (batchSize, inputSize, outputSize),
-            (inputSize, outputSize, self.dw, self.db))
+            globalSize= (batchSize, inputSize, outputSize),
+            tensors= (self.dw, self.db),
+            constants= (inputSize, outputSize)    )
         self.computeLocalGradient = Kernel(densecl.computeLocalGradient, 
-            (batchSize, inputSize),
-            (inputSize, outputSize, self.sigma, self.db, self.dphi, self.w))
+            globalSize= (batchSize, inputSize),
+            tensors= (self.sigma, self.db, self.dphi, self.w),
+            constants= (inputSize, outputSize,)    )
         self.learningRule = Kernel(densecl.learningRule, 
-            (inputSize, outputSize),
-            (inputSize, outputSize, batchSize, self.dw,self.db,self.w,self.b))
-        
+            globalSize= (inputSize, outputSize),
+            tensors= (self.dw,self.db,self.w,self.b),
+            constants= (inputSize, outputSize, batchSize))
+    
+
     def forwardPropagate(self, ym1):
         self.ym1 = ym1
         self.GPUForwardPropagate(self.ym1)
         self.activate()
         return self.y
     
-    def backwardPropagate(self, sigma, lrate):
-        self.computedb(sigma)
+    def backwardPropagate(self, lrate, sigmaOut):
+        self.sigmaOut = sigmaOut
+        self.computedb(self.sigmaOut)
         self.computeGradients(self.ym1)
         self.computeLocalGradient()
-        self.learningRule(np.float32(lrate))
+        self.learningRule(lrate)
         return self.sigma
     
     def unpack(params):
@@ -89,18 +99,18 @@ class Dense(Layer):
 
 class Conv(Layer):
     def __init__(self, kernel, filters, padding, strides, activation, inputShape =  None):
-        self.kernel = np.int32(kernel)
-        self.filters = np.int32(filters)
-        self.padding = np.int32(padding)
+        self.kernel = kernel
+        self.filters = filters
+        self.padding = padding
         self.activation = activation
-        self.strides = tuple(np.int32(i) for i in strides)
+        self.strides = strides
         if inputShape is not None:
             self.initiateInput(inputShape)
         else:
             self.inputShape = None
         
     def initiateInput(self, inputShape):
-        self.inputShape = tuple(np.int32(i) for i in inputShape)
+        self.inputShape = inputShape
         padding = self.padding
         strides = self.strides    
         kernel = self.kernel
@@ -111,7 +121,7 @@ class Conv(Layer):
         self.b = Tensor(np.random.randn(filters))
 
     def allocateMemory(self, batchSize):
-        self.batchSize = np.int32(batchSize)
+        self.batchSize = batchSize
         self.batchSize = batchSize
         self.v = Tensor((self.batchSize,*self.outputShape))
         self.y = Tensor((self.batchSize,*self.outputShape))
@@ -121,39 +131,51 @@ class Conv(Layer):
         self.db = Tensor((batchSize, self.filters))
         
         self.GPUForwardPropagate = Kernel(convolutionalcl.forwardPropagate,
-            (batchSize, self.filters, np.prod(self.outputShape[:2])),
-            (*self.outputShape[:2], self.filters,
-             *self.strides, *self.kernel, *self.inputShape, self.padding,
-             self.v, self.w, self.b))
+            globalSize= (batchSize, self.filters, np.prod(self.outputShape[:2])),
+            tensors= (self.v, self.w, self.b),
+            constants= (*self.outputShape[:2], self.filters,*self.strides, *self.kernel,
+                                                         *self.inputShape, self.padding))
+
         self.activate = Kernel(self.activation.kernel, 
-             (np.prod((batchSize,*self.outputShape)),),
-             (self.v, self.y, self.dphi))
+            globalSize= (np.prod((batchSize,*self.outputShape)),) ,
+            tensors= (self.v, self.y, self.dphi),
+            constants= tuple())
+
         self.computedb = Kernel(convolutionalcl.computedb, 
-             (batchSize,self.filters),
-             (*self.outputShape,self.dphi,self.db))
+            globalSize= (batchSize,self.filters),
+            tensors= (self.dphi,self.db),
+            constants= self.outputShape)
+
         self.computeGradients = Kernel(convolutionalcl.computeGradients, 
-             (batchSize*self.filters,np.prod(self.kernel),self.inputShape[2]),
-             (*self.outputShape,*self.inputShape,*self.kernel, *self.strides, self.padding,
-             self.dw,self.dphi))
+            globalSize= (batchSize*self.filters,np.prod(self.kernel),self.inputShape[2]),
+            tensors= (self.dw,self.dphi),
+            constants= (*self.outputShape,*self.inputShape,*self.kernel, *self.strides, self.padding))
+
         self.computeLocalGradient = Kernel(convolutionalcl.computeLocalGradient, 
-            (batchSize, np.prod(self.inputShape[:2]), self.inputShape[2]),
-            (*self.outputShape,*self.inputShape,*self.kernel, *self.strides, self.padding,
-            self.sigma, self.dphi, self.w))
+            globalSize= (batchSize, np.prod(self.inputShape[:2]), self.inputShape[2]),
+            tensors= (self.sigma, self.dphi, self.w),
+            constants= (*self.outputShape,*self.inputShape,*self.kernel, *self.strides, self.padding) )
+
         self.learningRule = Kernel(convolutionalcl.learningRule, 
-            (np.prod(self.w.shape),),
-            (self.filters, self.batchSize, np.prod(self.w.shape[1:]), self.dw,self.db,self.w,self.b))
+            globalSize= (np.prod(self.w.shape),),
+            tensors= (self.dw,self.db,self.w,self.b),
+            constants= (self.filters, self.batchSize, np.prod(self.w.shape[1:])) )
+
 
     def forwardPropagate(self, ym1):
+        #Conv
         self.ym1 = ym1
-        self.GPUForwardPropagate(self.ym1)
+        self.GPUForwardPropagate(ym1)
         self.activate()
         return self.y
     
-    def backwardPropagate(self, sigma, lrate):
-        self.computedb(sigma)
-        self.computeGradients(self.ym1, sigma)
-        self.computeLocalGradient(sigma)
-        self.learningRule(np.float32(lrate))
+    def backwardPropagate(self, lrate, sigmaOut):
+        #Conv
+        self.sigmaOut = sigmaOut 
+        self.computedb(sigmaOut)
+        self.computeGradients(self.ym1, sigmaOut)
+        self.computeLocalGradient(self.sigmaOut)
+        self.learningRule(lrate)
         return self.sigma
     
     def pack(self):
@@ -176,7 +198,7 @@ class Reshape(Layer):
         self.w = None
         self.b = None
         if isinstance(outputShape,int):
-            self.outputShape = (np.int32(outputShape),)
+            self.outputShape = (outputShape,)
         else:
             self.outputShape = outputShape
         if inputShape is not None:
@@ -197,8 +219,9 @@ class Reshape(Layer):
         self.y = self.ym1.reshape((self.batchSize,*self.outputShape))
         return self.y
     
-    def backwardPropagate(self, sigma ,lrate):
-        self.sigma = sigma.reshape((self.batchSize,*self.inputShape))
+    def backwardPropagate(self, lrate, sigmaOut):
+        self.sigmaOut = sigmaOut
+        self.sigma = self.sigmaOut.reshape((self.batchSize,*self.inputShape))
         return self.sigma
     
     def unpack(initiateParams):

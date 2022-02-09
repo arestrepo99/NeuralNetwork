@@ -86,7 +86,7 @@ def runCPUKernel(function, globalSize, kernelArgs, ind = None):
 
 def CPUvsGPUtest(kernel: Kernel, function, args):
     # Running CPU Kernel
-    testArrayParameters = runCPUKernel(function, kernel.globalSize, list(args)+list(kernel.staticParams), args)
+    testArrayParameters = runCPUKernel(function, kernel.globalSize, list(args)+list(kernel.params), args)
     # Running GPU Kernel
     kernel(*args)
 
@@ -97,7 +97,7 @@ def CPUvsGPUtest(kernel: Kernel, function, args):
     passed = True
     message = ""
     debugOutput = {}
-    for ind,param in enumerate(args+kernel.staticParams):
+    for ind,param in enumerate(args+kernel.params):
         if isinstance(param,Tensor):
             param = param.get()
             #Debugging 
@@ -129,7 +129,7 @@ def testConv(conv):
 
 
 def CPUAnaliticalTest():
-
+    pass
 
 
 def getRandomData(model: NeuralNetwork, batchSize):

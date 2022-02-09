@@ -19,7 +19,7 @@ class Tensor:
                         size=np.prod(self.shape)*32//4)
         else:
             raise(TypeError("Expected buffer, numpy array, or shape"))
-    
+
     def get(self):
         out = np.empty(self.shape).astype(np.float32)
         cl.enqueue_copy(queue, src=self.buffer, dest=out)
@@ -40,7 +40,9 @@ class Tensor:
         for ind,size in enumerate(reshape):
             if size == -1:
                 reshape = list(reshape)
-                reshape[ind] = np.int32(-np.prod(shape)/np.prod(reshape))
+                reshape[ind] = -np.prod(shape)//np.prod(reshape)
+                if -np.prod(shape)%np.prod(reshape) != 0:
+                    raise Exception("Axis not reshapable")
                 reshape = tuple(reshape)
         return reshape
 

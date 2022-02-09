@@ -1,9 +1,9 @@
 kernel void forwardPropagate(global float *ym1,
-                             const uint inSize,
-                             const uint outSize,
                              global float *v,
                              global float *w,
-                             global float *b){
+                             global float *b,
+                             const uint inSize,
+                             const uint outSize,){
 
     uint batch = get_global_id(0);
     uint j = get_global_id(1);
@@ -26,18 +26,18 @@ kernel void computeError(global float *Y,
     e[ind] = -(Y[ind]-y[ind])/2;
 }
 
-kernel void computedb(global float *sigma,
+kernel void computedb(global float *sigmaOut,
                              global float *dphi,
                              global float *db){
     uint ind = get_global_id(0);
-    db[ind]= sigma[ind]*dphi[ind];
+    db[ind]= sigmaOut[ind]*dphi[ind];
 }
 
 kernel void computeGradients(global float *ym1,
-                             const uint inSize,
-                             const uint outSize,
                              global float *dw,
-                             global float *db){
+                             global float *db),
+                             const uint inSize,
+                             const uint outSize{
     uint batch = get_global_id(0);
     uint i = get_global_id(1);
     uint j = get_global_id(2);
@@ -47,12 +47,12 @@ kernel void computeGradients(global float *ym1,
             db[outSize*batch + j];
 }
 
-kernel void computeLocalGradient(const uint inSize,
-                            const uint outSize,
-                            global float *sigma,
+kernel void computeLocalGradient(global float *sigma,
                             global float *db,
                             global float *dphi,
-                            global float *w){
+                            global float *w,
+                            const uint inSize,
+                            const uint outSize,){
     uint batch = get_global_id(0);
     uint i = get_global_id(1);
     uint indIn = inSize*batch + i;
@@ -65,14 +65,14 @@ kernel void computeLocalGradient(const uint inSize,
 
 
 
-kernel void learningRule(const float lrate,
-                        const uint inSize,
-                        const uint outSize,
-                        const uint batchSize,
-                        global float *dw,
+kernel void learningRule(global float *dw,
                         global float *db,
                         global float *w,
-                        global float *b){
+                        global float *b,
+                        const float lrate,
+                        const uint inSize,
+                        const uint outSize,
+                        const uint batchSize){
 
     uint i = get_global_id(0);
     uint j = get_global_id(1);

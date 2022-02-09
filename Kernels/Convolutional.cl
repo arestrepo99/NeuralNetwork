@@ -1,4 +1,7 @@
 kernel void forwardPropagate(global float *ym1,
+                             global float *v,
+                             global float *w,
+                             global float *b,
                              const int outSize1,
                              const int outSize2,
                              const int filters,
@@ -9,10 +12,8 @@ kernel void forwardPropagate(global float *ym1,
                              const int inSize1,
                              const int inSize2,
                              const int inSize3,
-                             const int padding,
-                             global float *v,
-                             global float *w,
-                             global float *b){
+                             const int padding
+){
 
     int batch = get_global_id(0);
     int filter = get_global_id(1);
@@ -53,12 +54,12 @@ kernel void forwardPropagate(global float *ym1,
 }
 
 
-kernel void computedb(global float *sigma,
+kernel void computedb(global float *sigmaOut,
+                             global float *dphi,
+                             global float *db
                              const uint outSize1,
                              const uint outSize2,
-                             const uint filters,
-                             global float *dphi,
-                             global float *db){
+                             const uint filters,){
     uint batch = get_global_id(0);
     uint filter = get_global_id(1);
 
@@ -71,13 +72,15 @@ kernel void computedb(global float *sigma,
         indOut1 = out1*outSize2*filters;
         for(uint out2 = 0; out2<outSize2; out2++){
             indOut2 = out2*filters;
-            db[ind] += sigma[indOut+indOut1+indOut2]*dphi[indOut+indOut1+indOut2];
+            db[ind] += sigmaOut[indOut+indOut1+indOut2]*dphi[indOut+indOut1+indOut2];
         }
     }
 }
 
 kernel void computeGradients(global float * ym1,
-                        global float *sigma,
+                        global float *sigmaOut,
+                        global float *dw,
+                        global float *dphi,
                         const int outSize1,
                         const int outSize2,
                         const int filters,
@@ -88,9 +91,7 @@ kernel void computeGradients(global float * ym1,
                         const int kernel2,
                         const int stride1,
                         const int stride2,
-                        const int padding,
-                        global float *dw,
-                        global float *dphi
+                        const int padding
                         ){
     int batch = get_global_id(0)/filters;
     int filter = get_global_id(0)%filters;
@@ -127,13 +128,16 @@ kernel void computeGradients(global float * ym1,
             indIn2 = in2 *inSize3;
             indOut2 = (in2-k2+padding)/stride2 * filters;
             dw[wind] += ym1[indIn+indIn1+indIn2]*
-                sigma[indOut+indOut1+indOut2]*
+                sigmaOut[indOut+indOut1+indOut2]*
                 dphi[indOut+indOut1+indOut2];
         }
     } 
 }
 
 kernel void computeLocalGradient(global float *sigmaOut,
+                            global float *sigmaIn,
+                            global float *dphi,
+                            global float *w,
                             const int outSize1,
                             const int outSize2,
                             const int filters,
@@ -144,10 +148,8 @@ kernel void computeLocalGradient(global float *sigmaOut,
                             const int kernel2,
                             const int stride1,
                             const int stride2,
-                            const int padding,
-                            global float *sigmaIn,
-                            global float *dphi,
-                            global float *w){
+                            const int padding
+                            ){
                                 
     int batch = get_global_id(0);
     int in1 = get_global_id(1)/inSize2;

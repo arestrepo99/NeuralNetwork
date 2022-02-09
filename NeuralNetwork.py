@@ -21,8 +21,6 @@ class NeuralNetwork:
         for ind in range(1,len(self.layers)):
             if self.layers[ind].inputShape is None:
                 self.layers[ind].initiateInput(self.layers[ind-1].outputShape)
-                self.layers[ind-1].simgaOut = self.layers[ind].sigma
-                self.layers[ind].ym1 = self.layers[ind-1].y
             if not self.layers[ind].inputShape == self.layers[ind-1].outputShape:
                 err = f'Dimensions {self.layers[ind].inputShape} and {self.layers[ind-1].outputShape} dont match.'
                 raise MismatchedDimension(err)
@@ -38,7 +36,7 @@ class NeuralNetwork:
             return(self.E.get().mean()/np.prod(self.outputShape))
 
     def allocateMemory(self, batchSize):
-        self.batchSize = np.int32(batchSize)
+        self.batchSize = batchSize
         
         self.e = Tensor((self.batchSize,*self.outputShape))
         self.e2 = Tensor((self.batchSize,*self.outputShape))
@@ -52,7 +50,7 @@ class NeuralNetwork:
         self.squareError = Kernel(densecl.squareError, (np.prod((self.batchSize,*self.outputShape)),),
                         (self.e, self.e2))
         self.meanError = Kernel(densecl.meanError, (np.prod(self.outputShape),),
-                        (batchSize, np.prod(self.outputShape), self.e2, self.E))
+                        (batchSize, int(np.prod(self.outputShape)), self.e2, self.E))
 
 
     def save(self, name):
@@ -81,9 +79,9 @@ class NeuralNetwork:
     def gradientDescent(self, X, Y, lrate):
         self.ypred = self.predict(X)
         self.loss.append(self.getLoss(Y))
-        sigma = self.e
+        sigmaOut = self.e
         for layer in self.layers[::-1]:
-            sigma = layer.backwardPropagate(sigma,lrate)
+            sigmaOut = layer.backwardPropagate(lrate,sigmaOut)
     
     def train(self, x_train, y_train, epochs, lrate, plotfunc):
         numBatches, batchSize = x_train.shape[:2]
