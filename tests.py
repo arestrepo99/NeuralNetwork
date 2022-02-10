@@ -37,15 +37,15 @@ class bcolors:
     Failed = FAIL + "FAILED" + ENDC
 
 class TestArray():
-    def __init__(self, array, cond = lambda in1,in2,out3,out4: True):
+    def __init__(self, array, cond = lambda index: True):
         self.array = array
         self.shape = array.shape
-        self.indexes = np.zeros(array.shape,4).astype(bool)
+        self.indexes = np.empty(array.shape).astype(tuple)
         self.index = (0,0,0,0)
         self.cond = cond
 
     def __getitem__(self, index: tuple):
-        if self.cond(*self.index):
+        if self.cond(self.index):
             for i,ind in enumerate(index):
                 if not (ind >= 0):
                     print(index)
@@ -55,7 +55,7 @@ class TestArray():
             return self.array[index]
     
     def __setitem__(self, index: tuple, newvalue):
-        if self.cond(*self.index):
+        if self.cond(self.index):
             for i,ind in enumerate(index):
                 assert ind >= 0, f'dim {i}'
                 assert ind < self.array.shape[i], f'dim {i}'
@@ -68,64 +68,7 @@ class TestArray():
             return True
         return False
 
-def runCPUKernel(function, globalSize, kernelArgs, ind = None):
-    testArrayParameters = []
-    # Changing tensors to test array
-    for param in kernelArgs:
-        if isinstance(param,Tensor):
-            testArrayParameters.append(TestArray(param.get()))
-        else:
-            testArrayParameters.append(param)
-    if ind is None:
-        # Running in CPU
-        for globalIndex in product(*(list(range(i)) for i in globalSize)):
-            function(globalIndex,*testArrayParameters)
-    else:
-        function(ind,*testArrayParameters)
-    return testArrayParameters
 
-def CPUvsGPUtest(kernel: Kernel, function, args):
-    # Running CPU Kernel
-    testArrayParameters = runCPUKernel(function, kernel.globalSize, list(args)+list(kernel.params), args)
-    # Running GPU Kernel
-    kernel(*args)
-
-    #Getting Param Names 
-    paramNames = str(signature(function))[1:-1].split(', ')[1:]
-
-    #Compare outputs to determine if test was passed or failed
-    passed = True
-    message = ""
-    debugOutput = {}
-    for ind,param in enumerate(args+kernel.params):
-        if isinstance(param,Tensor):
-            param = param.get()
-            #Debugging 
-            if testArrayParameters[ind].assertAccessed(paramNames[ind]):
-                debugOutput["na"+paramNames[ind]] = testArrayParameters[ind].accessed
-            # Testing the answer is the same
-            if abs(np.sum(testArrayParameters[ind].array-param)) > TOLERANCE:
-                message += f'Param Index {ind} with name "{paramNames[ind]}" was off by {abs(np.sum(testArrayParameters[ind].array-param))}\n'
-                passed = False
-                debugOutput["d"+paramNames[ind]] = testArrayParameters[ind].array-param
-    if passed:
-        print(f'{bcolors.Passed} {function.__name__}')
-    else:
-        print(f'{bcolors.Failed} {function.__name__}')
-        print(message)
-    return debugOutput
-
-
-import LayerTests.Convolutional as convTest
-def testConv(conv):
-    ym1 = Tensor(np.random.randn(conv.batchSize,*conv.inputShape))
-    sigmaOut = Tensor(np.random.randn(conv.batchSize,*conv.outputShape))
-    CPUvsGPUtest(conv.GPUForwardPropagate,convTest.forwardPropagate,(ym1,))
-    CPUvsGPUtest(conv.activate,convTest.sigmoidTest,tuple())
-    CPUvsGPUtest(conv.computedb,convTest.computedb,(sigmaOut,))
-    CPUvsGPUtest(conv.computeGradients,convTest.computeGradients,(ym1,sigmaOut))
-    CPUvsGPUtest(conv.computeLocalGradient,convTest.computeLocalGradient,(sigmaOut,))
-    CPUvsGPUtest(conv.learningRule,convTest.learningRule,(np.float32(1),))
 
 
 def CPUAnaliticalTest():

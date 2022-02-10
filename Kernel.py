@@ -13,8 +13,8 @@ def factors(n):
 class Kernel():
     def __init__(self, function, globalSize, tensors = tuple(), constants= tuple()):
         self.function = function
-        self.tensors  = tuple(Kernel.unpack(arg) for arg in constants)
-        self.constants =  tuple(Kernel.unpack(arg) for arg in tensors)
+        self.tensors  = tensors# tuple(Kernel.unpack(arg) for arg in tensors)
+        self.constants =  constants #tuple(Kernel.unpack(arg) for arg in constants)
         self.globalSize = globalSize
         self.localSize = None
         if not isinstance(self.globalSize,tuple):
@@ -32,8 +32,8 @@ class Kernel():
     def __call__(self, *args):
         if self.localSize is None:
             self.optimize(args)
-        unpacked_args = tuple(Kernel.unpack(arg) for arg in args)
-        self.function(queue, self.globalSize, self.localSize, *(unpacked_args+self.tensors+self.constants))
+        unpacked_args = tuple(Kernel.unpack(arg) for arg in args+self.constants+self.tensors)
+        self.function(queue, self.globalSize, self.localSize, *unpacked_args)
 
 
     def optimize(self, args, reps = 3):   

@@ -7,4 +7,4 @@ convolutionalcl = cl.Program(context, open('Convolutional.cl').read()).build()
 activationscl = cl.Program(context, open('Activations.cl').read()).build()
 #poolcl = cl.Program(context, open('Pool.cl').read()).build()
 
-kerneloptimization = True
+kerneloptimization = False
