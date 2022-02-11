@@ -1,9 +1,0 @@
-/.DS_Store
-/.ipynb_checkpoints
-/.vscode
-/Backups
-/__pycache__
-/mnist.pkl
-/models
-Tests/.DS_Store
-Tests/__pycache__/__init__.cpython-38.pyc
