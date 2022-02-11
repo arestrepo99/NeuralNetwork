@@ -186,7 +186,8 @@ class Conv(Layer):
 
     def unpack(params):
         kernel, filters, padding, strides, activation, inputShape, w, b = params
-        instance = Conv(kernel, filters, padding, strides, activation, inputShape= inputShape)
+        instance = Conv(kernel, activation, filters=filters, padding=padding,
+                                         strides=strides, inputShape= inputShape)
         instance.w.set(w)
         instance.b.set(b)
         return instance

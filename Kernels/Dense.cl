@@ -8,7 +8,6 @@ kernel void forwardPropagate(global float *ym1,
     uint batch = get_global_id(0);
     uint j = get_global_id(1);
 
-    uint indOut = batch*outSize + j;
     uint indIn = batch*inSize;
     float acc = b[j];
     for (unsigned int k = 0; k < inSize; k++){
