@@ -36,7 +36,7 @@ class bcolors:
     Passed = OKGREEN + "PASSED" + ENDC
     Failed = FAIL + "FAILED" + ENDC
 
-class TestArray():
+class DebugArray():
     def __init__(self, array, cond = lambda index: True):
         self.array = array
         self.shape = array.shape

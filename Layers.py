@@ -64,7 +64,7 @@ class Dense(Layer):
         self.computeLocalGradient = Kernel(densecl.computeLocalGradient, 
             globalSize= (batchSize, inputSize),
             tensors= (self.sigma, self.db, self.dphi, self.w),
-            constants= (inputSize, outputSize,)    )
+            constants= (inputSize, outputSize,))
         self.learningRule = Kernel(densecl.learningRule, 
             globalSize= (inputSize, outputSize),
             tensors= (self.dw,self.db,self.w,self.b),
@@ -98,7 +98,7 @@ class Dense(Layer):
 
 
 class Conv(Layer):
-    def __init__(self, kernel, filters, padding, strides, activation, inputShape =  None):
+    def __init__(self, kernel, activation, filters = 1, padding= 0, strides= (1,1), inputShape =  None):
         self.kernel = kernel
         self.filters = filters
         self.padding = padding

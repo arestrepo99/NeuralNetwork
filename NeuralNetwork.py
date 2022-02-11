@@ -1,10 +1,11 @@
 import numpy as np
 import pyopencl as cl
 from Layers import Layer, Reshape
-from settings import densecl
+from settings import neuralnetworkcl
 from Tensor import Tensor
 from Kernel import Kernel
 import pickle
+
 
 class MismatchedDimension(Exception):
     pass
@@ -29,11 +30,12 @@ class NeuralNetwork:
         self.outputShape = layers[-1].outputShape
         self.loss = []
 
-    def getLoss(self,Y):
+    def getLoss(self, Y):
+            self.Y = Y
             self.computeError(Y, self.e)
             self.squareError()
             self.meanError()
-            return(self.E.get().mean()/np.prod(self.outputShape))
+            return(self.E.get().sum())
 
     def allocateMemory(self, batchSize):
         self.batchSize = batchSize
@@ -44,12 +46,12 @@ class NeuralNetwork:
 
         [layer.allocateMemory(batchSize) for layer in self.layers]
 
-        self.computeError = Kernel(densecl.computeError, 
+        self.computeError = Kernel(neuralnetworkcl.computeError, 
             (batchSize*np.prod(self.outputShape),),
             (self.layers[-1].y,))
-        self.squareError = Kernel(densecl.squareError, (np.prod((self.batchSize,*self.outputShape)),),
+        self.squareError = Kernel(neuralnetworkcl.squareError, (np.prod((self.batchSize,*self.outputShape)),),
                         (self.e, self.e2))
-        self.meanError = Kernel(densecl.meanError, (np.prod(self.outputShape),),
+        self.meanError = Kernel(neuralnetworkcl.meanError, (np.prod(self.outputShape),),
                         (batchSize, int(np.prod(self.outputShape)), self.e2, self.E))
 
 

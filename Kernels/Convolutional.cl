@@ -1,7 +1,7 @@
-kernel void forwardPropagate(global float *ym1,
-                             global float *v,
-                             global float *w,
-                             global float *b,
+kernel void forwardPropagate(__global float *ym1,
+                             __global float *v,
+                             __global float *w,
+                             __global float *b,
                              const int outSize1,
                              const int outSize2,
                              const int filters,
@@ -12,8 +12,7 @@ kernel void forwardPropagate(global float *ym1,
                              const int inSize1,
                              const int inSize2,
                              const int inSize3,
-                             const int padding
-){
+                             const int padding){
 
     int batch = get_global_id(0);
     int filter = get_global_id(1);
@@ -56,10 +55,10 @@ kernel void forwardPropagate(global float *ym1,
 
 kernel void computedb(global float *sigmaOut,
                              global float *dphi,
-                             global float *db
+                             global float *db,
                              const uint outSize1,
                              const uint outSize2,
-                             const uint filters,){
+                             const uint filters){
     uint batch = get_global_id(0);
     uint filter = get_global_id(1);
 
@@ -76,6 +75,8 @@ kernel void computedb(global float *sigmaOut,
         }
     }
 }
+
+
 
 kernel void computeGradients(global float * ym1,
                         global float *sigmaOut,
@@ -191,13 +192,13 @@ kernel void computeLocalGradient(global float *sigmaOut,
  
  
 kernel void learningRule(const float lrate,
-                        const uint filters,
-                        const uint batchSize,
-                        const uint wsize,
                         global float *dw,
                         global float *db,
                         global float *w,
-                        global float *b){
+                        global float *b,     
+                        const uint filters,
+                        const uint batchSize,
+                        const uint wsize ){
 
     uint ind = get_global_id(0);
 

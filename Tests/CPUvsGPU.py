@@ -65,7 +65,6 @@ def runCPUKernel(function, globalSize, args):
 
 def test(kernel: Kernel, function, args):
     # Running CPU Kernel
-    
     CPU_PARAMS = runCPUKernel(function, kernel.globalSize, args+kernel.tensors+kernel.constants)
     # Running GPU Kernel
     kernel(*args)
@@ -79,7 +78,7 @@ def test(kernel: Kernel, function, args):
     passed = True
     message = ""
     for name in PARAMETER_NAMES:
-        if isinstance(param,Tensor):
+        if isinstance(GPU_PARAMS[name],Tensor):
             mean_error = np.sum(np.abs(CPU_PARAMS[name].array-GPU_PARAMS[name].get()))
             if mean_error > TOLERANCE:
                 message += f'Param Index {ind} with name "{name}" was off by {mean_error}\n'

@@ -1,4 +1,3 @@
-from sre_constants import IN_IGNORE
 import numpy as np
 def forwardPropagate(globalIndex,
                     ym1,

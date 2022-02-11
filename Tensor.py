@@ -1,9 +1,11 @@
 import numpy as np
 import pyopencl as cl
-
+from time import time
 from settings import context, queue
+import settings
 
 class Tensor:
+    run_times = []
     def __init__(self, input, shape = None):
         if isinstance(input, cl.Buffer):
             self.buffer = input
@@ -22,15 +24,23 @@ class Tensor:
 
     def get(self):
         out = np.empty(self.shape).astype(np.float32)
+        queue.finish()
+        start_time = time()
         cl.enqueue_copy(queue, src=self.buffer, dest=out)
+        queue.finish()
+        settings.run_times.append(("Getting Data From GPU",time()-start_time))
         return out
 
     def __repr__(self) -> str:
         return self.get().__str__()
 
     def set(self,values):
+        queue.finish()
+        start_time = time()
         cl.enqueue_copy(queue, src=values.flatten().astype(np.float32), 
                     dest=self.buffer)
+        queue.finish()
+        settings.run_times.append(("Setting data on GPU",time()-start_time))
 
     def __getitem__(self, key):
         size = np.prod(self.shape[1:])

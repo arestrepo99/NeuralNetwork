@@ -1,30 +1,24 @@
 kernel void forwardPropagate(global float *ym1,
                              global float *v,
-                             global float *w,
+                             __constant float *w,
                              global float *b,
                              const uint inSize,
-                             const uint outSize,){
+                             const uint outSize){
 
     uint batch = get_global_id(0);
     uint j = get_global_id(1);
 
     uint indOut = batch*outSize + j;
     uint indIn = batch*inSize;
-    v[outSize*batch + j] = b[j];
+    float acc = b[j];
     for (unsigned int k = 0; k < inSize; k++){
-        v[indOut] += 
+        acc += 
         ym1[indIn + k] * 
         w[k*outSize + j];
     }
-    
+    v[outSize*batch + j] = acc;
 }
 
-kernel void computeError(global float *Y,
-                             global float *e,
-                             global float *y){
-    uint ind = get_global_id(0);
-    e[ind] = -(Y[ind]-y[ind])/2;
-}
 
 kernel void computedb(global float *sigmaOut,
                              global float *dphi,
@@ -35,9 +29,9 @@ kernel void computedb(global float *sigmaOut,
 
 kernel void computeGradients(global float *ym1,
                              global float *dw,
-                             global float *db),
+                             global float *db,
                              const uint inSize,
-                             const uint outSize{
+                             const uint outSize){
     uint batch = get_global_id(0);
     uint i = get_global_id(1);
     uint j = get_global_id(2);
@@ -52,24 +46,25 @@ kernel void computeLocalGradient(global float *sigma,
                             global float *dphi,
                             global float *w,
                             const uint inSize,
-                            const uint outSize,){
+                            const uint outSize){
+
     uint batch = get_global_id(0);
     uint i = get_global_id(1);
     uint indIn = inSize*batch + i;
     uint indOut = outSize*batch;
     sigma[indIn] = 0;
     for(uint j = 0; j<outSize; j++){;
-        sigma[indIn] += w[outSize*i+j]*db[indOut];
+        sigma[indIn] += w[outSize*i+j]*db[indOut+j];
     }
 }
 
 
 
-kernel void learningRule(global float *dw,
+kernel void learningRule(const float lrate,
+                        global float *dw,
                         global float *db,
                         global float *w,
                         global float *b,
-                        const float lrate,
                         const uint inSize,
                         const uint outSize,
                         const uint batchSize){
@@ -83,7 +78,7 @@ kernel void learningRule(global float *dw,
         ind += outSize*inSize;
         Dw += dw[ind];
     }
-    w[outSize*i+j] += -Dw*lrate/batchSize;
+    w[outSize*i+j] += -Dw*lrate;
 
     if(i == 0){
         float Db = 0;
@@ -92,26 +87,6 @@ kernel void learningRule(global float *dw,
             ind += outSize;
             Db += db[ind];
         }
-        b[j] += -Db*lrate/batchSize;
+        b[j] += -Db*lrate;
     }
-}
-
-
-kernel void squareError(global float *e,
-                        global float *e2){
-
-    uint ind = get_global_id(0);
-    e2[ind] = pow(e[ind],2);
-    }
-
-kernel void meanError(const int batchSize,
-                const int outSize,
-                global float *e2,
-                global float *E){
-    uint ind = get_global_id(0);
-    E[ind] = 0;            
-    for(int batch=0; batch<batchSize; batch++){
-        E[ind] += e2[batch*outSize + ind];
-    }
-    E[ind] = E[ind]/batchSize;
 }

@@ -4,11 +4,11 @@ kernel void sigmoid(global float *v,
     
     uint ind = get_global_id(0);
     
-    if (v[ind] > 20){
-        v[ind] = 20;
+    if (v[ind] > 80){
+        v[ind] = 80;
     }
-    if (v[ind] < -20){
-        v[ind] = -20;
+    if (v[ind] < -80){
+        v[ind] = -80;
     }
 
     y[ind] = 1/( 1 + exp(-v[ind]));
