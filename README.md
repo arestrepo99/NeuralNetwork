@@ -44,11 +44,29 @@ model = NeuralNetwork([Conv((5,5),sigmoid,filters=6,padding=2,strides=(2,2),inpu
 def plotfunc(model):
     if len(loss) % 500 == 0 :
         plt.plot(loss)
+        plt.xlabel("Iteration")
+        plt.ylabel("Loss")
+        plt.title("Loss (0,end)")
         plt.figure()
-        plt.plot(range(10000,len(loss)),loss[1000:])
+        plt.title("Loss (2000,end)")
+        plt.xlabel("Iteration")
+        plt.ylabel("Loss")
+        plt.plot(range(2000,len(loss)),loss[2000:])
         plt.pause(0.1)
         clear_output(wait=True)
  
 print(model)
 model.train(x_train, y_train, epochs=1000, lrate=0.01, plotfunc=plotfunc)
 ```
+
+		 MODEL SUMMARY: 
+Input: 		 (28, 28, 1)
+Conv Layer: 		(14, 14, 6)
+Conv Layer: 		(10, 10, 10)
+Conv Layer: 		(6, 6, 16)
+Reshape Layer: 		(576,)
+Dense Layer: 		(100,)
+Dense Layer: 		(10,)
+
+![alt text](utils/fig/fig1.png))
+![alt text](utils/fig/fig2.png))
