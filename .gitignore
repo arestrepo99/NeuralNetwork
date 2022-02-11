@@ -4,3 +4,6 @@
 /Backups
 /__pycache__
 /mnist.pkl
+/models
+Tests/.DS_Store
+Tests/__pycache__/__init__.cpython-38.pyc
