@@ -1,6 +1,6 @@
 kernel void forwardPropagate(global float *ym1,
                              global float *v,
-                             __constant float *w,
+                             global float *w,
                              global float *b,
                              const uint inSize,
                              const uint outSize){

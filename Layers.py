@@ -1,7 +1,7 @@
 from matplotlib.container import BarContainer
 import numpy as np
-from Tensor import Tensor
-from Kernel import Kernel
+from utils.Tensor import Tensor
+from utils.Kernel import Kernel
 from settings import densecl, convolutionalcl, activationscl
 
 class sigmoid:

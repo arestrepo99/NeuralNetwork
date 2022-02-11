@@ -2,8 +2,8 @@ import numpy as np
 import pyopencl as cl
 from Layers import Layer, Reshape
 from settings import neuralnetworkcl
-from Tensor import Tensor
-from Kernel import Kernel
+from utils.Tensor import Tensor
+from utils.Kernel import Kernel
 import pickle
 
 

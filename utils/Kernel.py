@@ -1,7 +1,7 @@
 from xml.dom.expatbuilder import parseString
 import numpy as np
 import pyopencl as cl
-from Tensor import Tensor
+from utils.Tensor import Tensor
 from functools import reduce
 from settings import queue, kerneloptimization
 import settings
@@ -42,6 +42,7 @@ class Kernel():
             self.function(queue, self.globalSize, self.localSize, *unpacked_args)
         except:
             print(*unpacked_args)
+            print(self.function.function_name)
             raise Exception
         queue.finish()
         settings.run_times.append((self.function.function_name,time()-start_time))
