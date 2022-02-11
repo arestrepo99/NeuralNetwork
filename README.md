@@ -58,15 +58,15 @@ def plotfunc(model):
 print(model)
 model.train(x_train, y_train, epochs=1000, lrate=0.01, plotfunc=plotfunc)
 ```
-
-		 MODEL SUMMARY: 
-Input: 		 (28, 28, 1)
-Conv Layer: 		(14, 14, 6)
-Conv Layer: 		(10, 10, 10)
-Conv Layer: 		(6, 6, 16)
-Reshape Layer: 		(576,)
-Dense Layer: 		(100,)
+MODEL SUMMARY: \
+Input: 		 (28, 28, 1) \
+Conv Layer: 		(14, 14, 6)\
+Conv Layer: 		(10, 10, 10)\
+Conv Layer: 		(6, 6, 16)\
+Reshape Layer: 		(576,)\
+Dense Layer: 		(100,)\
 Dense Layer: 		(10,)
+
 
 ![alt text](utils/fig/fig1.png))
 ![alt text](utils/fig/fig2.png))
