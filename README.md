@@ -1,8 +1,9 @@
 # Neural Network
 An OpenCL implementation of backpropagation algorithm. 
 
-- Works with Nvidea and AMD GPU
+- Works with Nvidea and AMD Devices
 - Dense and Convolutional Layers
+- Kernels lack memory coalescing and other optimizations
 
 ## Installation
 
@@ -69,5 +70,5 @@ Dense Layer: 		(100,)\
 Dense Layer: 		(10,)
 
 
-![alt text](utils/fig/fig1.png))
-![alt text](utils/fig/fig2.png))
+![alt text](utils/fig/fig1.png)
+![alt text](utils/fig/fig2.png)
