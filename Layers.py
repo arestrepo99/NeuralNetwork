@@ -1,4 +1,3 @@
-from matplotlib.container import BarContainer
 import numpy as np
 from utils.Tensor import Tensor
 from utils.Kernel import Kernel
