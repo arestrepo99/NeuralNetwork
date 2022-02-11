@@ -59,7 +59,7 @@ print(model)
 model.train(x_train, y_train, epochs=1000, lrate=0.01, plotfunc=plotfunc)
 ```
 
-\t\t MODEL SUMMARY: \
+ MODEL SUMMARY: \
 Input: 		 (28, 28, 1)\
 Conv Layer: 		(14, 14, 6)\
 Conv Layer: 		(10, 10, 10)\
